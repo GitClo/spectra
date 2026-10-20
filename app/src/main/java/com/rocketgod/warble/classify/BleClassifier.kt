@@ -3,7 +3,14 @@ package com.rocketgod.warble.classify
 import android.content.Context
 import org.json.JSONObject
 
-data class Inference(val name: String?, val maker: String?, val category: String, val icon: String)
+data class Inference(
+    val name: String?,
+    val maker: String?,
+    val category: String,
+    val icon: String,
+    /** Product-level label when the payload identifies one (e.g. "AirPods Pro 2"). */
+    val model: String? = null
+)
 
 class BleClassifier private constructor(
     private val full: Map<Int, String>,

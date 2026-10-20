@@ -9,7 +9,17 @@ import com.rocketgod.warble.data.BlockedDevice
 import com.rocketgod.warble.data.ObservationEntity
 import com.rocketgod.warble.data.PrivacyZone
 import com.rocketgod.warble.data.RunEntity
+import com.rocketgod.warble.data.SightingEntity
 import com.rocketgod.warble.data.WarbleDb
+import com.rocketgod.warble.domain.classify.DeviceCategorizer
+import com.rocketgod.warble.domain.fingerprint.BleAdvertisement
+import com.rocketgod.warble.domain.fingerprint.BleFingerprint
+import com.rocketgod.warble.domain.fingerprint.DeviceClusterer
+import com.rocketgod.warble.domain.model.DeviceCategory
+import com.rocketgod.warble.domain.model.MacAddress
+import com.rocketgod.warble.domain.model.MacKind
+import com.rocketgod.warble.domain.security.WifiSecurityAnalyzer
+import com.rocketgod.warble.domain.tracking.SightingThrottle
 import com.rocketgod.warble.model.Contact
 import com.rocketgod.warble.model.SignalType
 import com.rocketgod.warble.scan.BleScanSource
@@ -87,6 +97,7 @@ class Repository(private val context: Context, private val scope: CoroutineScope
 
     private val db = WarbleDb.get(context)
     private val dao = db.dao()
+    private val intel = db.intel()
     private val classifier by lazy { BleClassifier.get(context) }
     private val oui by lazy { com.rocketgod.warble.classify.OuiLookup.get(context) }
     val location = LocationProvider(context)
@@ -457,6 +468,7 @@ class Repository(private val context: Context, private val scope: CoroutineScope
             scope.launch(Dispatchers.IO) { try { readCells() } catch (_: Throwable) {} finally { cellReadInFlight = false } }
         }
         pruneAndEmit(force = true)
+        pruneIntel(now)
         if (now - lastRateLog > 3000L) {
             val w = rawWifi.getAndSet(0); val b = rawBle.getAndSet(0); val c = rawCell.getAndSet(0)
             lastRateLog = now
@@ -519,7 +531,8 @@ class Repository(private val context: Context, private val scope: CoroutineScope
         }
         val due = ArrayList<Contact>()
         for (raw in batch) {
-            val inf0 = classify(raw)
+            val id = identify(raw, now)
+            val inf0 = classify(raw, id.adv, id.fingerprint)
             val prev = live[raw.key]
 
             val keepNotable = com.rocketgod.warble.classify.NotableDevices.isNotableMaker(prev?.maker) &&
@@ -561,16 +574,31 @@ class Repository(private val context: Context, private val scope: CoroutineScope
                 wifiStandard = if (raw.wifiStandard != 0) raw.wifiStandard else (prev?.wifiStandard ?: 0),
                 channelWidthMhz = if (raw.channelWidthMhz != 0) raw.channelWidthMhz else (prev?.channelWidthMhz ?: 0),
                 centerFreqMhz = if (raw.centerFreqMhz != 0) raw.centerFreqMhz else (prev?.centerFreqMhz ?: 0),
-                distanceMm = prev?.distanceMm
+                distanceMm = prev?.distanceMm,
+
+                profileId = id.profileId,
+                macKind = id.macKind.name,
+                fingerprint = id.fingerprint?.signature ?: prev?.fingerprint,
+                fingerprintSummary = id.fingerprint?.summary ?: prev?.fingerprintSummary,
+                stableId = id.fingerprint?.stableId ?: prev?.stableId,
+                linkConfidence = id.assignment?.confidence ?: prev?.linkConfidence,
+                linkedFrom = id.assignment?.linkedFrom ?: prev?.linkedFrom,
+                advIntervalMs = id.assignment?.advIntervalMs ?: prev?.advIntervalMs,
+                txPower = raw.txPower ?: prev?.txPower,
+                security = securityOf(raw) ?: prev?.security,
+                model = inf.model ?: prev?.model
             )
             live[raw.key] = contact
+            seenSinceFlush.add(raw.key)
+            recordSighting(contact, loc, now)
 
             if (prev == null) com.rocketgod.warble.classify.NotableDevices.match(raw.name, raw.key, raw.companyId, raw.serviceUuids, raw.appleType, raw.fmdn, raw.flockProbe)?.let { hit ->
                 if (announcedNotable.add(hit.banner)) _notable.tryEmit(hit)
             }
 
             val backfillLoc = prev != null && prev.lat == null && loc != null
-            if (prev == null || raw.rssi > prev.bestRssi || backfillLoc) due.add(contact)
+            val profileChanged = prev != null && prev.profileId != contact.profileId
+            if (prev == null || raw.rssi > prev.bestRssi || backfillLoc || profileChanged) due.add(contact)
         }
 
         for (c in due) pendingWrites[c.key] = c
@@ -591,22 +619,68 @@ class Repository(private val context: Context, private val scope: CoroutineScope
     @Volatile private var currentPhoneWifi: Set<String> = emptySet()
     @Volatile private var phoneScanAt: Long = 0L
 
+    /**
+     * Write queued observation rows, location sightings and profile corrections.
+     *
+     * Order matters. Clusterer corrections (splits of wrongly linked MACs) are applied to the
+     * in-memory queues first, so nothing queued under the old profile is written after the
+     * fix; then rows and sightings are written; finally the same corrections are applied to
+     * rows persisted by earlier flushes.
+     */
     suspend fun flushPending() {
-        if (pendingWrites.isEmpty()) return
-        val batch = ArrayList<Contact>(pendingWrites.size)
-        val it = pendingWrites.entries.iterator()
-        while (it.hasNext()) { batch.add(it.next().value); it.remove() }
-        if (batch.isEmpty()) return
         val now = System.currentTimeMillis()
-
+        val touched = ArrayList<String>(seenSinceFlush.size)
+        seenSinceFlush.iterator().let { itr -> while (itr.hasNext()) { touched.add(itr.next()); itr.remove() } }
         writeLock.withLock {
-            val rows = ArrayList<ObservationEntity>(batch.size)
-            for (c in batch) rows.add(buildRow(c, now))
-            dao.upsertBatch(rows)
+            val fixes = clusterer.drainReassignments().associate { it.mac to it.newProfileId }
+            for ((mac, pid) in fixes) {
+                profileOverrides.remove(mac)
+                live.computeIfPresent(mac) { _, c -> c.copy(profileId = pid, linkConfidence = 1.0, linkedFrom = null) }
+                pendingWrites.computeIfPresent(mac) { _, c -> c.copy(profileId = pid, linkConfidence = 1.0, linkedFrom = null) }
+            }
+
+            val batch = ArrayList<Contact>(pendingWrites.size)
+            val it = pendingWrites.entries.iterator()
+            while (it.hasNext()) { batch.add(it.next().value); it.remove() }
+            if (batch.isNotEmpty()) {
+                try {
+                    val rows = ArrayList<ObservationEntity>(batch.size)
+                    for (c in batch) rows.add(buildRow(c, now, fixes[c.key]))
+                    dao.upsertBatch(rows)
+                } catch (t: Throwable) {
+                    // Put the batch back: later sightings of these devices may not be "due"
+                    // again, so dropping it here would lose them from the database for good.
+                    for (c in batch) pendingWrites.putIfAbsent(c.key, c)
+                    com.rocketgod.warble.usb.BeastDiag.log("flush: observation write failed, ${batch.size} rows re-queued: ${t.message}")
+                    throw t
+                }
+            }
+
+            if (pendingSightings.isNotEmpty()) {
+                val rows = ArrayList<SightingEntity>(pendingSightings.size)
+                while (true) {
+                    val sg = pendingSightings.poll() ?: break
+                    val pid = fixes[sg.deviceKey] ?: profileOverrides[sg.profileId] ?: sg.profileId
+                    rows.add(if (pid == sg.profileId) sg else sg.copy(profileId = pid))
+                }
+                try {
+                    rows.chunked(500).forEach { intel.insertSightings(it) }
+                } catch (t: Throwable) {
+                    pendingSightings.addAll(rows)
+                    com.rocketgod.warble.usb.BeastDiag.log("flush: sighting write failed, ${rows.size} re-queued: ${t.message}")
+                }
+            }
+
+            for ((mac, pid) in fixes) intel.reassign(mac, pid)
+
+            // Devices still in range: keep last_seen current even though their row wasn't rewritten.
+            val written = batch.mapTo(HashSet(batch.size)) { it.key }
+            touched.filterNot { it in written }.chunked(500).forEach { runCatching { intel.touchLastSeen(it, now) } }
         }
     }
 
-    private suspend fun buildRow(c: Contact, now: Long): ObservationEntity {
+    /** [forcedProfile] is a clusterer correction that must override any persisted profile. */
+    private suspend fun buildRow(c: Contact, now: Long, forcedProfile: String? = null): ObservationEntity {
         val existing = dao.find(c.key)
 
         val known = existing?.inWigle == true ||
@@ -622,6 +696,18 @@ class Repository(private val context: Context, private val scope: CoroutineScope
 
         val notableFlag = com.rocketgod.warble.classify.NotableDevices.isNotableMaker(finalMaker) ||
             com.rocketgod.warble.classify.NotableDevices.threat(finalName, c.key, finalCompanyId, finalCategory) != null
+
+        // A persisted profile wins over this session's in-memory one, so a device keeps its
+        // history across restarts; stable payload IDs can also recover an older profile.
+        // Only an address that is its own in-session profile may redirect that profile:
+        // a stale queued copy of a linked address must never re-link its cluster.
+        val resolvedProfile = forcedProfile
+            ?: existing?.profileId
+            ?: c.stableId?.let { intel.profileForStableId(it) }
+            ?: c.profileId
+        if (forcedProfile == null && c.profileId == c.key && resolvedProfile != c.profileId) {
+            profileOverrides[c.profileId] = resolvedProfile
+        }
         return ObservationEntity(
                 key = c.key, type = c.type.name, name = finalName,
                 maker = finalMaker,
@@ -642,7 +728,19 @@ class Repository(private val context: Context, private val scope: CoroutineScope
                 viaMonitor = c.viaMonitor || (existing?.viaMonitor ?: false),
                 inWdgw = existing?.inWdgw == true,
                 wifiStandard = if (c.wifiStandard != 0) c.wifiStandard else (existing?.wifiStandard ?: 0),
-                notable = notableFlag
+                notable = notableFlag,
+                profileId = resolvedProfile,
+                security = c.security ?: existing?.security,
+                fingerprint = c.fingerprint ?: existing?.fingerprint,
+                stableId = c.stableId ?: existing?.stableId,
+                serviceUuids = c.serviceUuids.takeIf { it.isNotEmpty() }?.joinToString(",") { it.lowercase() }
+                    ?: existing?.serviceUuids,
+                macKind = c.macKind ?: existing?.macKind,
+                advIntervalMs = c.advIntervalMs ?: existing?.advIntervalMs,
+                txPower = c.txPower ?: existing?.txPower,
+                linkConfidence = if (resolvedProfile == c.profileId) c.linkConfidence ?: existing?.linkConfidence
+                    else existing?.linkConfidence,
+                fingerprintSummary = c.fingerprintSummary ?: existing?.fingerprintSummary
             )
     }
 
@@ -652,13 +750,19 @@ class Repository(private val context: Context, private val scope: CoroutineScope
         pruneAndEmit(force = true)
     }
 
-    private fun classify(raw: RawObservation): com.rocketgod.warble.classify.Inference {
+    /**
+     * Category inference, in priority order: notable-device rules (cameras, trackers, attack
+     * tools), then the high-precision [DeviceCategorizer] rules (hearing aids, Apple/Microsoft
+     * payloads, GATT services...), then the vendor-table [BleClassifier].
+     */
+    private fun classify(raw: RawObservation, adv: BleAdvertisement?, fp: BleFingerprint?): com.rocketgod.warble.classify.Inference {
         val base = when (raw.type) {
-            SignalType.BLE -> classifier.infer(raw.name, raw.companyId, raw.serviceUuids)
+            SignalType.BLE -> categorizeBleCached(raw, adv, fp)
             SignalType.WIFI -> if (raw.wifiClient)
                 com.rocketgod.warble.classify.Inference(raw.name, null, "WiFi Client", "wifi")
-            else
-                com.rocketgod.warble.classify.Inference(raw.name, null, "WiFi AP", "wifi")
+            else DeviceCategorizer.categorizeWifiAp(raw.name)
+                ?.let { com.rocketgod.warble.classify.Inference(raw.name, null, it.category.label, "wifi", it.model) }
+                ?: com.rocketgod.warble.classify.Inference(raw.name, null, "WiFi AP", "wifi")
             SignalType.CELL -> com.rocketgod.warble.classify.Inference(
                 raw.name, null, "Cell tower", "antenna.radiowaves.left.and.right"
             )
@@ -683,6 +787,111 @@ class Repository(private val context: Context, private val scope: CoroutineScope
 
         return if (hit.isNetworkTracker) resolved.copy(maker = null, category = category)
         else resolved.copy(name = resolved.name ?: hit.brand, maker = makerLabel, category = category)
+    }
+
+    // ---- identity, fingerprinting & location history ----------------------------------------
+
+    /** MAC de-randomization engine. Only the BLE ingest lane feeds it (methods are synchronized). */
+    private val clusterer = DeviceClusterer()
+    /** Sighting throttles: fixed infrastructure needs far fewer history points than mobile devices. */
+    private val mobileThrottle = SightingThrottle()
+    private val fixedApThrottle = SightingThrottle(minMoveM = 75.0, heartbeatMs = 15 * 60_000L, rssiStepDb = 6)
+    /** Cell towers: kilometre-scale coverage, so sparse samples are enough for a coverage estimate. */
+    private val cellThrottle = SightingThrottle(minMoveM = 250.0, heartbeatMs = 15 * 60_000L, rssiStepDb = 6)
+    private val pendingSightings = java.util.concurrent.ConcurrentLinkedQueue<SightingEntity>()
+    /** MACs heard since the last flush, whose `last_seen` should be refreshed. */
+    private val seenSinceFlush: MutableSet<String> = ConcurrentHashMap.newKeySet()
+    /** In-session profile id -> persisted profile id, when the database already knew the device. */
+    private val profileOverrides = ConcurrentHashMap<String, String>()
+    @Volatile private var lastIntelPrune = 0L
+
+    private class Identity(
+        val profileId: String,
+        val macKind: MacKind,
+        val adv: BleAdvertisement?,
+        val fingerprint: BleFingerprint?,
+        val assignment: DeviceClusterer.Assignment?,
+    )
+
+    /** Decode the advertisement, fingerprint it, and resolve which physical device sent it. */
+    private fun identify(raw: RawObservation, now: Long): Identity = when (raw.type) {
+        SignalType.BLE -> {
+            val adv = BleAdvertisement.parse(raw.rawAdvertisement)
+            val fp = BleFingerprint.from(adv, raw.name, raw.companyId, raw.serviceUuids, raw.connectable)
+            val kind = MacAddress.classifyBle(
+                raw.key, raw.addressRandom,
+                hasRegisteredOui = raw.addressRandom == null && oui.vendor(raw.key) != null
+            )
+            val a = clusterer.observe(
+                DeviceClusterer.Sample(raw.key, raw.timestampMs.takeIf { it > 0 } ?: now, raw.rssi, fp.signature, fp.stableId, kind.rotates)
+            )
+            Identity(profileOverrides[a.profileId] ?: a.profileId, kind, adv, fp, a)
+        }
+        SignalType.WIFI -> Identity(raw.key, MacAddress.classifyWifi(raw.key), null, null, null)
+        SignalType.CELL -> Identity(raw.key, MacKind.UNKNOWN, null, null, null)
+    }
+
+    private fun securityOf(raw: RawObservation): String? =
+        if (raw.type == SignalType.WIFI && !raw.wifiClient && raw.capabilities != null)
+            WifiSecurityAnalyzer.analyze(raw.capabilities).type.key
+        else null
+
+    /**
+     * Categorizer results keyed by fingerprint signature: the signature already covers every
+     * input the rules look at, and BLE devices re-advertise many times a second.
+     */
+    private val bleCategoryCache = object : LinkedHashMap<String, com.rocketgod.warble.classify.Inference>(512, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, com.rocketgod.warble.classify.Inference>?) = size > 4096
+    }
+
+    private fun categorizeBleCached(raw: RawObservation, adv: BleAdvertisement?, fp: BleFingerprint?): com.rocketgod.warble.classify.Inference {
+        val cacheKey = fp?.signature?.let { "$it|${raw.companyId}|${raw.serviceUuids.size}" }
+        if (cacheKey != null) synchronized(bleCategoryCache) { bleCategoryCache[cacheKey] }?.let { return it.copy(name = raw.name) }
+        val guess = DeviceCategorizer.categorizeBle(raw.name, raw.companyId, raw.serviceUuids, adv, fp)
+        val inf = if (guess != null) com.rocketgod.warble.classify.Inference(
+            raw.name, guess.maker ?: classifier.companyName(raw.companyId), guess.category.label, iconToken(guess.category), guess.model
+        ) else classifier.infer(raw.name, raw.companyId, raw.serviceUuids).let { it.copy(category = DeviceCategory.canonicalLabel(it.category)) }
+        if (cacheKey != null) synchronized(bleCategoryCache) { bleCategoryCache[cacheKey] = inf }
+        return inf
+    }
+
+    private fun iconToken(c: DeviceCategory): String = when (c) {
+        DeviceCategory.SMARTWATCH -> "applewatch"
+        DeviceCategory.AUDIO -> "headphones"
+        DeviceCategory.COMPUTER -> "laptopcomputer"
+        DeviceCategory.PHONE -> "iphone"
+        DeviceCategory.TRACKER -> "mappin"
+        DeviceCategory.FITNESS -> "figure.run"
+        DeviceCategory.PERIPHERAL -> "keyboard"
+        else -> "dot.radiowaves.left.and.right"
+    }
+
+    /** Queue a location-history row if the throttle says this observation adds information. */
+    private fun recordSighting(c: Contact, loc: android.location.Location?, now: Long) {
+        if (loc == null) return
+        if (now - loc.time > 5 * 60_000L) return // stale fix: better no point than a wrong one
+        val throttle = when {
+            c.type == SignalType.CELL -> cellThrottle
+            c.type == SignalType.WIFI && c.category == "WiFi AP" -> fixedApThrottle
+            else -> mobileThrottle
+        }
+        val acc = if (loc.hasAccuracy()) loc.accuracy.toDouble() else null
+        if (!throttle.shouldRecord(c.key, now, loc.latitude, loc.longitude, acc, c.rssi)) return
+        pendingSightings.add(
+            SightingEntity(
+                deviceKey = c.key, profileId = c.profileId, type = c.type.name, ts = now,
+                lat = loc.latitude, lng = loc.longitude, accuracy = acc, rssi = c.rssi, runId = runId
+            )
+        )
+    }
+
+    private fun pruneIntel(now: Long) {
+        if (now - lastIntelPrune < 60_000L) return
+        lastIntelPrune = now
+        clusterer.prune(now)
+        mobileThrottle.prune(now)
+        fixedApThrottle.prune(now)
+        cellThrottle.prune(now)
     }
 
     private val _notable = MutableSharedFlow<com.rocketgod.warble.classify.NotableHit>(extraBufferCapacity = 16)
@@ -1149,7 +1358,8 @@ class Repository(private val context: Context, private val scope: CoroutineScope
                     key = r.key, type = type.name, name = r.name, maker = null, category = cat, icon = icon,
                     bestRssi = -120, lastRssi = -120, timesSeen = 0, firstSeen = now, lastSeen = now,
                     companyId = null, channel = null, frequency = null, capabilities = null, connectable = false,
-                    lat = null, lng = null, altitude = null, accuracy = null, runId = 0L, inWigle = true, exportedAt = now, viaMonitor = false
+                    lat = null, lng = null, altitude = null, accuracy = null, runId = 0L, inWigle = true, exportedAt = now, viaMonitor = false,
+                    profileId = r.key
                 )
             )
             added++
@@ -1171,4 +1381,5 @@ class Repository(private val context: Context, private val scope: CoroutineScope
 
     fun currentRunId() = runId
     fun dao() = dao
+    fun intelDao() = intel
 }

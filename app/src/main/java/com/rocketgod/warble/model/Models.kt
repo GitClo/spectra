@@ -59,7 +59,28 @@ data class Contact(
     val distanceMm: Int? = null,
 
     val liveByPhone: Boolean = false,
-    val liveByMonitor: Boolean = false
+    val liveByMonitor: Boolean = false,
+
+    // ---- identity & fingerprinting (see domain.fingerprint) ----
+
+    /** De-randomized profile this address belongs to; equals [key] unless linked. */
+    val profileId: String = key,
+    /** How the address was assigned (MacKind.name). */
+    val macKind: String? = null,
+    /** Rotation-invariant advertisement signature (BleFingerprint.signature). */
+    val fingerprint: String? = null,
+    val fingerprintSummary: String? = null,
+    val stableId: String? = null,
+    /** 0..1 confidence of the link to [profileId]. */
+    val linkConfidence: Double? = null,
+    /** Address this one was linked from by a rotation handoff, if any. */
+    val linkedFrom: String? = null,
+    val advIntervalMs: Int? = null,
+    val txPower: Int? = null,
+    /** WifiSecurity.key for access points. */
+    val security: String? = null,
+    /** Product-level label from the categorizer (e.g. "AirPods Pro 2"), if identified. */
+    val model: String? = null
 ) {
 
     val strength: Float

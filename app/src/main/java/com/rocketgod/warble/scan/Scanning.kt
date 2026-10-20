@@ -55,7 +55,17 @@ data class RawObservation(
 
     val rttResponder: Boolean = false,
 
-    val flockProbe: Boolean = false
+    val flockProbe: Boolean = false,
+
+    // ---- BLE fingerprinting inputs ----
+
+    /** Raw advertisement + scan response bytes (ScanRecord.getBytes). */
+    val rawAdvertisement: ByteArray? = null,
+    /** Wall-clock receive time derived from ScanResult.timestampNanos; 0 if unknown. */
+    val timestampMs: Long = 0L,
+    val txPower: Int? = null,
+    /** true/false when the platform reports the BLE address type (API 35+), else null. */
+    val addressRandom: Boolean? = null
 )
 
 interface ScanSource {
@@ -168,6 +178,18 @@ class BleScanSource(
         }
         val name = rec?.deviceName
         val connectable = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) r.isConnectable else true
+        // timestampNanos is on the elapsedRealtime clock; convert to wall time so advertising
+        // intervals and rotation handoffs can be measured precisely even in batched reports.
+        val ageMs = (android.os.SystemClock.elapsedRealtimeNanos() - r.timestampNanos) / 1_000_000L
+        val rxAt = System.currentTimeMillis() - ageMs.coerceIn(0L, 60_000L)
+        val tx = rec?.txPowerLevel?.takeIf { it != Int.MIN_VALUE }
+        val addrRandom: Boolean? = if (Build.VERSION.SDK_INT >= 35) {
+            when (runCatching { r.device.addressType }.getOrNull()) {
+                android.bluetooth.BluetoothDevice.ADDRESS_TYPE_PUBLIC -> false
+                android.bluetooth.BluetoothDevice.ADDRESS_TYPE_RANDOM -> true
+                else -> null
+            }
+        } else null
         return RawObservation(
             key = address,
             type = SignalType.BLE,
@@ -177,7 +199,11 @@ class BleScanSource(
             serviceUuids = uuids,
             appleType = appleType,
             fmdn = fmdn,
-            connectable = connectable
+            connectable = connectable,
+            rawAdvertisement = rec?.bytes,
+            timestampMs = rxAt,
+            txPower = tx,
+            addressRandom = addrRandom
         )
     }
 
