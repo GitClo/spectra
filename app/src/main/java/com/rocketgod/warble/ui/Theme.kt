@@ -7,7 +7,10 @@ import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.FlightTakeoff
 import androidx.compose.material.icons.filled.Headphones
+import androidx.compose.material.icons.filled.Hearing
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.Lightbulb
@@ -60,9 +63,28 @@ object Palette {
     var bluetooth by mutableStateOf(D_BLUE); private set
     var cell by mutableStateOf(D_INK); private set
 
-    val glow = Color(0xFF37ECCB)
-    val ochre = Color(0xFFE0A53C)
-    val danger = Color(0xFFFF5B52)
+    var glow by mutableStateOf(Color(0xFF37ECCB)); private set
+    var ochre by mutableStateOf(Color(0xFFE0A53C)); private set
+    var danger by mutableStateOf(Color(0xFFFF5B52)); private set
+
+    /**
+     * Bridge from the Material 3 scheme to the legacy palette, so screens that predate the
+     * MD3 redesign render with the same colors as the new ones. Called by WardriveTheme.
+     */
+    fun applyScheme(cs: androidx.compose.material3.ColorScheme, dark: Boolean) {
+        paper = cs.surface
+        surface = cs.surfaceContainer
+        panel = cs.surfaceContainerHigh
+        ink = cs.onSurface
+        line = cs.outlineVariant
+        muted = cs.onSurfaceVariant
+        gold = cs.tertiary
+        glow = cs.primary
+        ochre = cs.tertiary
+        danger = cs.error
+        bluetooth = if (dark) Color(0xFF8AB4F8) else Color(0xFF1A63C7)
+        cell = cs.onSurface
+    }
 
     fun apply(skin: com.rocketgod.warble.model.Skin) {
         val nInk = skin.inkHex?.let { Color(it) } ?: D_INK
@@ -110,7 +132,8 @@ object MapLayerFilter {
         set(ctx, if (enabled.containsAll(icons)) enabled - icons else enabled + icons)
 }
 
-val Mono = FontFamily.Monospace
+/** UI font for legacy screens: the system sans, matching the MD3 typography. */
+val AppFont: FontFamily = FontFamily.Default
 
 private fun luminance(c: Color): Double {
     fun lin(v: Float): Double {
@@ -146,6 +169,14 @@ fun iconFor(token: String, category: String): ImageVector {
         token.contains("keyboard") -> return Icons.Filled.Keyboard
     }
     return when (category) {
+        "Hearing aid" -> Icons.Filled.Hearing
+        "Smartwatch" -> Icons.Filled.Watch
+        "IoT" -> Icons.Filled.Home
+        "Medical" -> Icons.Filled.MonitorHeart
+        "Media" -> Icons.Filled.Tv
+        "Peripheral" -> Icons.Filled.Keyboard
+        "Drone" -> Icons.Filled.FlightTakeoff
+        "Security tool" -> Icons.Filled.Warning
         "Phone" -> Icons.Filled.Smartphone
         "Computer" -> Icons.Filled.Computer
         "Tablet" -> Icons.Filled.Tablet
