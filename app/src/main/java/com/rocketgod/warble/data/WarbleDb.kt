@@ -23,7 +23,9 @@ import kotlinx.coroutines.flow.Flow
         Index("type"), Index("category"), Index("maker"), Index("run_id"),
         Index(value = ["in_wigle", "type"]), Index(value = ["in_wdgw", "type"]),
 
-        Index(value = ["lat", "lng"])
+        Index(value = ["lat", "lng"]),
+
+        Index("profile_id"), Index("security"), Index("stable_id"), Index("last_seen")
     ]
 )
 data class ObservationEntity(
@@ -54,7 +56,28 @@ data class ObservationEntity(
     @ColumnInfo(name = "in_wdgw") val inWdgw: Boolean = false,
     @ColumnInfo(name = "wifi_standard") val wifiStandard: Int = 0,
 
-    @ColumnInfo(name = "notable", defaultValue = "0") val notable: Boolean = false
+    @ColumnInfo(name = "notable", defaultValue = "0") val notable: Boolean = false,
+
+    // ---- v16: identity, fingerprinting and security metadata ----
+
+    /** De-randomized device profile this MAC belongs to (see DeviceClusterer). */
+    @ColumnInfo(name = "profile_id") val profileId: String? = null,
+    /** WifiSecurity.key for access points. */
+    val security: String? = null,
+    /** BleFingerprint.signature: hash of the rotation-invariant advertisement structure. */
+    val fingerprint: String? = null,
+    /** Persistent payload identity (iBeacon / Eddystone-UID), when the device has one. */
+    @ColumnInfo(name = "stable_id") val stableId: String? = null,
+    /** Comma-separated advertised service UUIDs, kept for search. */
+    @ColumnInfo(name = "service_uuids") val serviceUuids: String? = null,
+    /** MacKind.name */
+    @ColumnInfo(name = "mac_kind") val macKind: String? = null,
+    @ColumnInfo(name = "adv_interval_ms") val advIntervalMs: Int? = null,
+    @ColumnInfo(name = "tx_power") val txPower: Int? = null,
+    /** Confidence (0..1) of the link from this MAC to its profile. */
+    @ColumnInfo(name = "link_confidence") val linkConfidence: Double? = null,
+    /** Human-readable fingerprint summary for the detail screen. */
+    @ColumnInfo(name = "fp_summary") val fingerprintSummary: String? = null
 )
 
 @Entity(tableName = "runs")
@@ -584,6 +607,65 @@ val MIGRATION_14_15 = object : Migration(14, 15) {
     }
 }
 
+/**
+ * v16: multi-location history (`sightings`), device profiles for MAC de-randomization, and
+ * fingerprint / security metadata on observations. Existing rows become their own profile and
+ * their single stored location seeds the sighting history so old finds appear on device maps.
+ */
+val MIGRATION_15_16 = object : Migration(15, 16) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        for (col in listOf(
+            "profile_id TEXT", "security TEXT", "fingerprint TEXT", "stable_id TEXT", "service_uuids TEXT",
+            "mac_kind TEXT", "adv_interval_ms INTEGER", "tx_power INTEGER", "link_confidence REAL", "fp_summary TEXT"
+        )) db.execSQL("ALTER TABLE observations ADD COLUMN $col")
+        db.execSQL("UPDATE observations SET profile_id = key")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_observations_profile_id ON observations (profile_id)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_observations_security ON observations (security)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_observations_stable_id ON observations (stable_id)")
+        // Device search and the encounter-driven screens sort by recency.
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_observations_last_seen ON observations (last_seen)")
+
+        // Pure synonyms collapse to the canonical DeviceCategory label; specific labels
+        // ("Glucose monitor", "Smart ring", ...) are kept and grouped at query time instead.
+        for ((from, to) in com.rocketgod.warble.domain.model.DeviceCategory.SYNONYMS) {
+            db.execSQL("UPDATE observations SET category = ? WHERE category = ?", arrayOf<Any>(to, from))
+        }
+
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS sightings (" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, device_key TEXT NOT NULL, profile_id TEXT NOT NULL, " +
+                "type TEXT NOT NULL, ts INTEGER NOT NULL, lat REAL NOT NULL, lng REAL NOT NULL, accuracy REAL, " +
+                "rssi INTEGER NOT NULL, run_id INTEGER NOT NULL)"
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_sightings_device_key_ts ON sightings (device_key, ts)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_sightings_profile_id_ts ON sightings (profile_id, ts)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_sightings_ts ON sightings (ts)")
+        db.execSQL(
+            "INSERT INTO sightings (device_key, profile_id, type, ts, lat, lng, accuracy, rssi, run_id) " +
+                "SELECT key, key, type, last_seen, lat, lng, accuracy, best_rssi, run_id FROM observations " +
+                "WHERE lat IS NOT NULL AND lng IS NOT NULL AND NOT (lat = 0 AND lng = 0)"
+        )
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS device_profiles (" +
+                "id TEXT NOT NULL PRIMARY KEY, label TEXT, note TEXT, trusted INTEGER NOT NULL, updated_at INTEGER NOT NULL)"
+        )
+    }
+}
+
+/** v17: estimated positions and coverage models of fixed transmitters (Wi-Fi APs, cells). */
+val MIGRATION_16_17 = object : Migration(16, 17) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS transmitter_estimates (" +
+                "profile_id TEXT NOT NULL PRIMARY KEY, type TEXT NOT NULL, lat REAL NOT NULL, lng REAL NOT NULL, " +
+                "uncertainty_m REAL NOT NULL, samples INTEGER NOT NULL, stationary INTEGER NOT NULL, one_sided INTEGER NOT NULL, " +
+                "p0_dbm REAL, path_loss_n REAL, fit_r2 REAL, model_range_m REAL, observed_range_m REAL, " +
+                "last_sighting_ts INTEGER NOT NULL, updated_at INTEGER NOT NULL)"
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_transmitter_estimates_lat_lng ON transmitter_estimates (lat, lng)")
+    }
+}
+
 val MIGRATION_13_14 = object : Migration(13, 14) {
     override fun migrate(db: SupportSQLiteDatabase) {
 
@@ -632,9 +714,18 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
     }
 }
 
-@Database(entities = [ObservationEntity::class, RunEntity::class, ExportSessionEntity::class, WigleKnownEntity::class, GnssSatEntity::class, CellTowerEntity::class, PmkidEntity::class, PrivacyZone::class, BlockedDevice::class], version = 15, exportSchema = false)
+@Database(
+    entities = [
+        ObservationEntity::class, RunEntity::class, ExportSessionEntity::class, WigleKnownEntity::class,
+        GnssSatEntity::class, CellTowerEntity::class, PmkidEntity::class, PrivacyZone::class, BlockedDevice::class,
+        SightingEntity::class, DeviceProfileEntity::class, TransmitterEstimateEntity::class
+    ],
+    version = 17, exportSchema = false
+)
 abstract class WarbleDb : RoomDatabase() {
     abstract fun dao(): WarbleDao
+    /** Device intelligence: location history, profiles, search, security analytics. */
+    abstract fun intel(): IntelDao
 
     companion object {
         @Volatile private var INSTANCE: WarbleDb? = null
@@ -645,7 +736,7 @@ abstract class WarbleDb : RoomDatabase() {
 
         private fun create(ctx: Context): WarbleDb =
             Room.databaseBuilder(ctx, WarbleDb::class.java, "warble.db")
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
                 .fallbackToDestructiveMigration()
                 .build()
 
