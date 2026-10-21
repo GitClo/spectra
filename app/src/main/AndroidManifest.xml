@@ -35,14 +35,14 @@
     <uses-feature android:name="android.hardware.usb.host" android:required="false" />
 
     <application
-        android:name=".WarbleApp"
+        android:name=".SpectraApp"
         android:allowBackup="false"
         android:enableOnBackInvokedCallback="true"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
-        android:label="Wardrive Go"
+        android:label="Spectra"
         android:supportsRtl="true"
-        android:theme="@style/Theme.WarBLE">
+        android:theme="@style/Theme.Spectra">
 
         <meta-data
             android:name="com.google.android.gms.car.application"
@@ -57,7 +57,7 @@
             android:launchMode="singleTop"
             android:screenOrientation="user"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
-            android:theme="@style/Theme.WarBLE">
+            android:theme="@style/Theme.Spectra">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -76,7 +76,7 @@
             android:foregroundServiceType="location" />
 
         <service
-            android:name=".car.WardriveCarAppService"
+            android:name=".car.SpectraCarAppService"
             android:exported="true">
             <intent-filter>
                 <action android:name="androidx.car.app.CarAppService" />
@@ -143,7 +143,7 @@
             android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="com.rocketgod.warble.CONSOLE_PAGE" />
+                <action android:name="io.github.gitclo.spectra.CONSOLE_PAGE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
@@ -184,7 +184,7 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
-                <data android:scheme="wear" android:host="*" android:pathPrefix="/wardrive/crash" />
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/spectra/crash" />
             </intent-filter>
         </service>
     </application>

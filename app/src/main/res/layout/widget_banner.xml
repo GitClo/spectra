@@ -17,7 +17,7 @@
             android:layout_width="14dp"
             android:layout_height="14dp"
             android:layout_marginEnd="4dp"
-            android:src="@drawable/ic_stat_wardrive"
+            android:src="@drawable/ic_stat_spectra"
             android:contentDescription="@null" />
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="War" android:textColor="#E9F3F0" android:textStyle="bold" android:textSize="13sp" android:maxLines="1" />
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="drive" android:textColor="#37ECCB" android:textStyle="bold" android:textSize="13sp" android:maxLines="1" />

@@ -6,15 +6,15 @@ plugins {
 }
 
 android {
-    namespace = "com.rocketgod.warble"
+    namespace = "io.github.gitclo.spectra"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.rocketgod.wardrive"
+        applicationId = "io.github.gitclo.spectra"
         minSdk = 26
         targetSdk = 36
-        versionCode = 573
-        versionName = "2.0.34"
+        versionCode = 1
+        versionName = "1.0.0"
         vectorDrawables { useSupportLibrary = true }
     }
 
@@ -49,6 +49,7 @@ android {
 
     buildFeatures { compose = true; buildConfig = true }
     packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
+    testOptions { unitTests.isReturnDefaultValues = true; unitTests.isIncludeAndroidResources = true }
 }
 
 dependencies {
@@ -78,7 +79,15 @@ dependencies {
     implementation("com.google.android.gms:play-services-location:21.3.0")
     implementation("com.google.android.gms:play-services-wearable:18.2.0")
     implementation("org.osmdroid:osmdroid-android:6.1.20")
-    implementation("com.google.android.play:app-update-ktx:2.1.0")
     implementation("androidx.wear:wear-remote-interactions:1.1.0")
     implementation("androidx.car.app:app:1.4.0")
+
+    // JVM unit tests for the pure-Kotlin domain layer (fingerprinting, clustering, security,
+    // following detection). Run with: gradle :app:testDebugUnitTest
+    testImplementation("junit:junit:4.13.2")
+    // Integration tests against a real Room database on the JVM.
+    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation("androidx.test:core:1.6.1")
+    testImplementation("androidx.room:room-testing:2.6.1")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
 }

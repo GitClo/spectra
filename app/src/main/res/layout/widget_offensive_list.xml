@@ -16,7 +16,7 @@
         <ImageView
             android:layout_width="16dp"
             android:layout_height="16dp"
-            android:src="@drawable/ic_stat_wardrive"
+            android:src="@drawable/ic_stat_spectra"
             android:contentDescription="@null" />
         <TextView
             android:id="@+id/ol_title"
