@@ -13,6 +13,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "WarBLEGo"
+rootProject.name = "Spectra"
 include(":app")
 include(":wear")
