@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.rocketgod.warble"
+    namespace = "io.github.gitclo.spectra"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.rocketgod.wardrive"
+        applicationId = "io.github.gitclo.spectra"
         minSdk = 26
         targetSdk = 36
         versionCode = 573
