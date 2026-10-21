@@ -1,13 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Keep in sync with UsbBeast.SUPPORTED. Only adapters with a working driver belong here. -->
 
     <usb-device vendor-id="3315" product-id="37489" />
     <usb-device vendor-id="3315" product-id="4102" />
 
-    <usb-device vendor-id="3034" product-id="33159" />
     <usb-device vendor-id="3034" product-id="2065" />
-    <usb-device vendor-id="3034" product-id="34834" />
-    <usb-device vendor-id="3034" product-id="34842" />
 
     <usb-device vendor-id="3034" product-id="34835" />
 

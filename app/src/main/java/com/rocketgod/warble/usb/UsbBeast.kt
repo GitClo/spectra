@@ -50,9 +50,14 @@ object UsbBeast {
         else -> Chipset.OTHER
     }
 
+    /**
+     * USB IDs the app has a working driver for. Keep in sync with res/xml/usb_device_filter.xml.
+     * Not listed on purpose: RTL8187 (0bda:8187, probe only, no capture) and RTL8812AU
+     * (0bda:8812 / 0bda:881a, no driver yet).
+     */
     private val SUPPORTED: Map<Int, Set<Int>> = mapOf(
         0x0cf3 to setOf(0x9271, 0x1006),
-        0x0bda to setOf(0x8187, 0x0811, 0x8812, 0x881a, 0x8813),
+        0x0bda to setOf(0x0811, 0x8813),
         0x148f to setOf(0x5370, 0x3070, 0x5372),
         0x0e8d to setOf(0x7612, 0x7610),
         0x10c4 to setOf(0xea60),

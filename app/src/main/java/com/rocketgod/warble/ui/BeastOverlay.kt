@@ -91,24 +91,24 @@ fun BoxScope.BeastOverlay(beast: BeastState, accent: androidx.compose.ui.graphic
                 Icon(Icons.Filled.Bolt, null, tint = hue, modifier = Modifier.size(66.dp).graphicsLayer { scaleX = pulse; scaleY = pulse })
                 Spacer(Modifier.height(10.dp))
                 val title = if (engaged) "BEAST MODE" else "WRONG ADAPTER"
-                Text(title, color = hue, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = if (engaged) 40.sp else 30.sp,
+                Text(title, color = hue, fontFamily = AppFont, fontWeight = FontWeight.Bold, fontSize = if (engaged) 40.sp else 30.sp,
                     style = TextStyle(shadow = Shadow(hue.copy(alpha = 0.9f), Offset.Zero, 34f)))
                 Spacer(Modifier.height(10.dp))
 
-                Text(a?.name ?: "External radio", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1)
+                Text(a?.name ?: "External radio", color = Palette.ink, fontFamily = AppFont, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1)
 
                 if (a != null) {
-                    Text("${a.chipsetName}  ·  ${a.idHex}", color = hue, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1)
+                    Text("${a.chipsetName}  ·  ${a.idHex}", color = hue, fontFamily = AppFont, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1)
                 }
                 Spacer(Modifier.height(6.dp))
                 Text(
                     when {
-                        !engaged -> "Wardrive Go drives the Atheros AR9271 (ath9k_htc), MediaTek MT7612U (mt76x2u), and ESP32 Marauder boards over serial. This one is detected but has no driver — swap to a supported adapter."
+                        !engaged -> "Monitor mode: Atheros AR9271, Ralink RT3070/RT5370, MediaTek MT7612U, Realtek RTL8814AU and RTL8821AU. Serial: ESP32 Marauder, Ghost ESP, Free-WiLi. This one is detected but has no driver; swap to a supported adapter."
                         serial -> "serial wardriver engaged · passive Wi-Fi scan"
                         mt -> "dual-band monitor mode ready · mt76x2u (2.4 + 5 GHz)"
                         else -> "monitor mode ready"
                     },
-                    color = if (engaged) Palette.muted else Palette.ink, fontFamily = Mono, fontSize = 12.sp,
+                    color = if (engaged) Palette.muted else Palette.ink, fontFamily = AppFont, fontSize = 12.sp,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
             }
@@ -126,7 +126,7 @@ fun BoxScope.BeastOverlay(beast: BeastState, accent: androidx.compose.ui.graphic
             Icon(Icons.Filled.Usb, null, tint = inkOn(Palette.ochre), modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(10.dp))
             Text("External adapter removed · back to internal radio",
-                color = inkOn(Palette.ochre), fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                color = inkOn(Palette.ochre), fontFamily = AppFont, fontWeight = FontWeight.Bold, fontSize = 14.sp)
         }
     }
 }
