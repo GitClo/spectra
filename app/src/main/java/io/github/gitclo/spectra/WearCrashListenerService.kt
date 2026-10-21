@@ -42,7 +42,7 @@ class WearCrashListenerService : WearableListenerService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val n = NotificationCompat.Builder(this, CHANNEL)
-            .setSmallIcon(R.drawable.ic_stat_wardrive)
+            .setSmallIcon(R.drawable.ic_stat_spectra)
             .setContentTitle("Watch crash report received")
             .setContentText("Tap to send it to the dev")
             .setStyle(NotificationCompat.BigTextStyle().bigText(text.take(600)))

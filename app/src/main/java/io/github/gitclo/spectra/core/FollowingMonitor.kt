@@ -101,7 +101,7 @@ class FollowingMonitor(private val context: Context, private val intel: IntelRep
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
             val n = Notification.Builder(context, CHANNEL)
-                .setSmallIcon(R.drawable.ic_stat_wardrive)
+                .setSmallIcon(R.drawable.ic_stat_spectra)
                 .setContentTitle("Possible tracking: ${a.label}")
                 .setContentText("Seen at ${a.places.size} places over %.1f km · ${a.level.label} risk".format(a.spanKm))
                 .setStyle(Notification.BigTextStyle().bigText(a.reasons.joinToString("\n")))

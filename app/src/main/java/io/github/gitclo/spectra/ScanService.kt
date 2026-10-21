@@ -43,7 +43,7 @@ class ScanService : Service() {
         val notif: Notification = Notification.Builder(this, CHANNEL)
             .setContentTitle("Spectra")
             .setContentText("Scanning for signals…")
-            .setSmallIcon(R.drawable.ic_stat_wardrive)
+            .setSmallIcon(R.drawable.ic_stat_spectra)
             .setContentIntent(tap)
             .setOngoing(true)
             .build()

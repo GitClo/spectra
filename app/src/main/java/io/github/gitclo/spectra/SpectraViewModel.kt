@@ -88,7 +88,7 @@ class SpectraViewModel(app: Application) : AndroidViewModel(app) {
         val n = Notification.Builder(ctx, SPOT_CHANNEL)
             .setContentTitle("Spotted: $title")
             .setContentText(hit.readable)
-            .setSmallIcon(R.drawable.ic_stat_wardrive)
+            .setSmallIcon(R.drawable.ic_stat_spectra)
             .setColor(hit.category.colorArgb.toInt())
             .setContentIntent(tap)
             .setAutoCancel(true)
