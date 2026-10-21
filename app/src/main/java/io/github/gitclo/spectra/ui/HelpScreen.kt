@@ -163,7 +163,7 @@ fun HelpScreen(
             Spacer(Modifier.height(8.dp))
             SettingSwitch("Dark map", "Use a dark basemap on every map in the app — field report, finds map, category maps and privacy zones.", darkMap, false, accent, onDarkMap)
             Spacer(Modifier.height(8.dp))
-            SettingSwitch("Reduce animations", "Turn off the score counter's roll/pop and alert-banner pop-ins (including offensive-device alerts). Numbers and banners update instantly instead.", reduceMotion, false, accent, onReduceMotion)
+            SettingSwitch("Reduce animations", "Turn off the counters' roll/pop and the sliding in-app alerts. Numbers and alerts update instantly instead.", reduceMotion, false, accent, onReduceMotion)
         }
 
         SettingsGroup(Icons.Filled.Sensors, "Scanning", accent, openGroup) {
@@ -185,15 +185,15 @@ fun HelpScreen(
             Spacer(Modifier.height(8.dp))
             SettingSwitch("Buzz on spot", "Vibrate on those spot alerts. A paired Wear OS watch mirrors it, so your wrist taps. (Needs System notifications on.)", buzzOnSpot, true, accent, onBuzzOnSpot)
             Spacer(Modifier.height(14.dp))
-            SubHeading("In-app banners")
-            Text("The banner at the top of the Scan screen. Alerts you turn off leave it on its rotating info cards.",
+            SubHeading("In-app alerts")
+            Text("Short alerts that slide in at the top of the Scan screen while the app is open. Turn off any you don't want.",
                 style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 8.dp))
             Spacer(Modifier.height(8.dp))
-            SettingSwitch("Offensive device alerts", "Banner drops down when an offensive/notable device (Flock, camera, drone, tracker, Flipper) is spotted. Turn off if you watch the Offensive Devices tool instead.", offensiveBanners, true, accent, onOffensiveBanners)
+            SettingSwitch("Offensive device alerts", "Alert when an offensive or notable device (Flock, camera, drone, tracker, Flipper) is spotted. Turn off if you watch the Offensive tool instead.", offensiveBanners, true, accent, onOffensiveBanners)
             Spacer(Modifier.height(8.dp))
-            SettingSwitch("Hash capture alerts", "Banner drops down when a PMKID or 4-way handshake is captured — a crackable hash to add to your haul.", captureBanners, true, accent, onCaptureBanners)
+            SettingSwitch("Hash capture alerts", "Alert when a PMKID or 4-way handshake is captured.", captureBanners, true, accent, onCaptureBanners)
             Spacer(Modifier.height(8.dp))
-            SettingSwitch("Achievement alerts", "Banner drops down on score achievements — milestones, unlocks, new best run and leaderboard rank changes.", achievementBanners, true, accent, onAchievementBanners)
+            SettingSwitch("Achievement alerts", "Alert on milestones, unlocks, a new best run and leaderboard rank changes.", achievementBanners, true, accent, onAchievementBanners)
             if (hasWatch) {
                 Spacer(Modifier.height(14.dp))
                 WifiGoalSetting(wifiGoal, accent, onWifiGoal)

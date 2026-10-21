@@ -82,6 +82,7 @@ import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Radar
 import androidx.compose.material.icons.filled.Security
@@ -148,14 +149,6 @@ import io.github.gitclo.spectra.usb.BeastState
 import io.github.gitclo.spectra.usb.GhostEsp
 
 @Composable
-fun pressable(onClick: () -> Unit): Pair<Modifier, Float> {
-    val src = remember { MutableInteractionSource() }
-    val pressed by src.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed) 0.96f else 1f, tween(120), label = "press")
-    return Modifier.clickable(interactionSource = src, indication = null) { onClick() } to scale
-}
-
-@Composable
 private fun RollingNumber(value: Long, color: Color, fontSize: TextUnit, shadow: Shadow? = null, compact: Boolean = false) {
     val text = if (compact) fmtCompact(value) else fmtGrouped(value)
     val style = TextStyle(
@@ -186,8 +179,6 @@ private fun RollingNumber(value: Long, color: Color, fontSize: TextUnit, shadow:
     }
 }
 
-private enum class BannerCard { NEW, SPLIT, HASH, RATE, DISTANCE, OPEN, SPEED }
-private class BannerStats(val phoneAp: Int, val extAp: Int, val totalAp: Int, val open: Int)
 
 @Composable
 internal fun AutoSizeText(text: String, color: Color, maxSize: TextUnit, minSize: TextUnit = 15.sp,
@@ -211,290 +202,54 @@ private enum class DashTool(val label: String, val icon: ImageVector) {
     SPECTRUM("Spectrum", Icons.Filled.GraphicEq),
 }
 
+/**
+ * Transient alert at the top of the Scan screen. Nothing is shown while idle; an offensive-device
+ * sighting, hash capture, achievement or upload in progress slides in as a small card. Which
+ * event types appear is controlled under Settings › Notifications › In-app alerts.
+ */
 @Composable
-private fun LiveBanner(
-    feedIn: FeedEvent?, accent: Color, scanning: Boolean,
-    contacts: List<Contact>, newWifi: Long, speedMps: Float?, bearingDeg: Float?,
-    distanceM: Double, ratePerMin: Int, externalEngaged: Boolean,
-    bannerMode: Int, onCycleMode: () -> Unit, useMetric: Boolean = false,
-    wiglePhase: SendPhase = SendPhase.IDLE, wdgwPhase: SendPhase = SendPhase.IDLE,
-    uploadStatus: String? = null,
-    hashesThisRun: Long = 0L,
-) {
-
+private fun EventAlert(feedIn: FeedEvent?, uploadStatus: String?) {
     val feed = feedIn?.takeUnless { e ->
         when (e.kind) {
-            io.github.gitclo.spectra.model.FeedKind.SPOTTED -> !UiFlags.offensiveBanners
-            io.github.gitclo.spectra.model.FeedKind.CAPTURE -> !UiFlags.captureBanners
-            io.github.gitclo.spectra.model.FeedKind.MILESTONE,
-            io.github.gitclo.spectra.model.FeedKind.UNLOCK,
-            io.github.gitclo.spectra.model.FeedKind.BEST,
-            io.github.gitclo.spectra.model.FeedKind.RANK -> !UiFlags.achievementBanners
+            FeedKind.SPOTTED -> !UiFlags.offensiveBanners
+            FeedKind.CAPTURE -> !UiFlags.captureBanners
+            FeedKind.MILESTONE, FeedKind.UNLOCK, FeedKind.BEST, FeedKind.RANK -> !UiFlags.achievementBanners
         }
     }
-
-    val tone = feed?.colorArgb?.let { Color(it) } ?: when {
-        feed?.kind == io.github.gitclo.spectra.model.FeedKind.CAPTURE -> Color(0xFFFF2BD1)
-        feed?.tone == FeedTone.GOLD || feed?.tone == FeedTone.HOT -> Palette.gold
-        else -> accent
-    }
-    val ink = inkOn(tone)
-
-    val pop = remember { Animatable(1f) }
-    LaunchedEffect(feed) {
-        if (feed != null && !UiFlags.reduceMotion) {
-
-            val capture = feed.kind == io.github.gitclo.spectra.model.FeedKind.CAPTURE || feed.kind == io.github.gitclo.spectra.model.FeedKind.SPOTTED
-            pop.snapTo(if (capture) 1.22f else 1.18f)
-            pop.animateTo(1f, spring(dampingRatio = if (capture) 0.4f else 0.32f, stiffness = if (capture) 420f else 480f))
+    val cs = MaterialTheme.colorScheme
+    // What to show: an event wins over the upload line; null hides the card.
+    data class Shown(val icon: ImageVector, val tint: Color, val label: String, val text: String)
+    val shown: Shown? = when {
+        feed != null -> when (feed.kind) {
+            FeedKind.SPOTTED -> Shown(Icons.Filled.Security, feed.colorArgb?.let { Color(it) } ?: cs.error, "Offensive device nearby", feed.title)
+            FeedKind.CAPTURE -> Shown(Icons.Filled.Key, cs.tertiary, "Captured", feed.eyebrow.ifBlank { feed.title }.lowercase().replaceFirstChar { it.uppercase() })
+            else -> Shown(feedIcon(feed.kind), cs.primary, feed.eyebrow.lowercase().replaceFirstChar { it.uppercase() }, feed.title)
         }
+        uploadStatus != null -> Shown(Icons.Filled.CloudUpload, cs.primary, "Upload", uploadStatus)
+        else -> null
     }
-    AnimatedContent(
-        targetState = feed,
-        transitionSpec = { (slideInVertically { it } + fadeIn()) togetherWith (slideOutVertically { -it } + fadeOut()) },
-        label = "banner"
-    ) { e ->
-        val isCapture = e?.kind == io.github.gitclo.spectra.model.FeedKind.CAPTURE || e?.kind == io.github.gitclo.spectra.model.FeedKind.SPOTTED
-        Box(
-            Modifier.fillMaxWidth().height(56.dp)
-                .graphicsLayer { scaleX = pop.value; scaleY = pop.value }
-                .then(if (e != null) Modifier.shadow(18.dp, RoundedCornerShape(12.dp), spotColor = tone, ambientColor = tone) else Modifier)
-                .clip(RoundedCornerShape(12.dp))
-                .background(tone)
-                .clickable { onCycleMode() }
-
-                .then(if (isCapture) Modifier else Modifier.padding(start = 20.dp, end = 26.dp)),
-            contentAlignment = Alignment.CenterStart
-        ) {
-
-            if (!isCapture) androidx.compose.foundation.Canvas(Modifier.matchParentSize().clip(RoundedCornerShape(12.dp))) {
-                val gap = 11.dp.toPx(); var gx = -size.height
-                while (gx < size.width) {
-                    drawLine(ink.copy(alpha = 0.04f),
-                        start = androidx.compose.ui.geometry.Offset(gx, size.height),
-                        end = androidx.compose.ui.geometry.Offset(gx + size.height, 0f), strokeWidth = 1f)
-                    gx += gap
-                }
-            }
-            if (e == null) {
-
-                val bs = run {
-                    var phoneAp = 0; var extAp = 0; var totalAp = 0; var open = 0
-                    for (c in contacts) if (c.type == io.github.gitclo.spectra.model.SignalType.WIFI) {
-                        if (c.category != "WiFi Client") {
-                            totalAp++
-                            if (c.liveByPhone) phoneAp++
-                            if (c.liveByMonitor) extAp++
-                            if (isOpenWifi(c.capabilities)) open++
-                        }
-                    }
-                    BannerStats(phoneAp, extAp, totalAp, open)
-                }
-                val allCards = BannerCard.values()
-
-                val autoCards = if (hashesThisRun > 0) allCards.toList() else allCards.filter { it != BannerCard.HASH }
-                var tick by remember { mutableStateOf(0) }
-                LaunchedEffect(bannerMode) { if (bannerMode == 0) while (true) { kotlinx.coroutines.delay(4000); tick++ } }
-                val card = if (bannerMode == 0) autoCards[tick % autoCards.size]
-                           else allCards[(bannerMode - 1).coerceIn(0, allCards.size - 1)]
-                val uploadStep = uploadStatus
-                if (uploadStep != null) {
-
-                    val tr = rememberInfiniteTransition(label = "uplPulse")
-                    val a by tr.animateFloat(0.5f, 1f,
-                        infiniteRepeatable(tween(600), androidx.compose.animation.core.RepeatMode.Reverse), label = "a")
-                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text(uploadStep, color = ink.copy(alpha = a), fontFamily = AppFont, fontWeight = FontWeight.Bold,
-                            fontSize = 17.sp, maxLines = 1, softWrap = false)
-                    }
-                } else if (!scanning) {
-                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text("Paused", color = ink, fontFamily = AppFont, fontWeight = FontWeight.Bold, fontSize = 26.sp, maxLines = 1)
-                    }
-                } else {
-                    AnimatedContent(
-                        targetState = card,
-                        transitionSpec = { (slideInVertically { it } + fadeIn()) togetherWith (slideOutVertically { -it } + fadeOut()) },
-                        label = "card",
-                        modifier = Modifier.fillMaxWidth()
-                    ) { c ->
-                        if (c == BannerCard.SPEED) {
-
-                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-                                    Text(if ((speedMps ?: 0f) > 1f) headingLabel(bearingDeg) else "—",
-                                        style = androidx.compose.material3.MaterialTheme.typography.titleMedium, color = ink.copy(alpha = 0.78f), maxLines = 1, softWrap = false)
-                                }
-                                Text(speedLabel(speedMps, useMetric), style = androidx.compose.material3.MaterialTheme.typography.headlineSmall, color = ink, maxLines = 1, softWrap = false)
-                                Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
-                                    Text(distanceLabel(distanceM, useMetric), style = androidx.compose.material3.MaterialTheme.typography.titleMedium, color = ink.copy(alpha = 0.78f), maxLines = 1, softWrap = false)
-                                }
-                            }
-                        } else if (c == BannerCard.NEW) {
-
-                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Filled.Wifi, null, tint = ink.copy(alpha = 0.65f), modifier = Modifier.size(26.dp))
-                                AutoSizeText("+$newWifi", ink, maxSize = 32.sp, minSize = 18.sp, modifier = Modifier.weight(1f))
-                                Icon(Icons.Filled.Wifi, null, tint = ink.copy(alpha = 0.65f), modifier = Modifier.size(26.dp))
-                            }
-                        } else {
-                            val txt = when (c) {
-                                BannerCard.NEW -> "+$newWifi new WiFi"
-                                BannerCard.SPLIT -> if (externalEngaged) "📱 ${bs.phoneAp} · ⚡ ${bs.extAp} · 🔀 ${bs.totalAp}"
-                                                    else "📱 ${bs.phoneAp} APs"
-                                BannerCard.HASH -> "🔑 $hashesThisRun captured"
-                                BannerCard.RATE -> "$ratePerMin new/min"
-                                BannerCard.DISTANCE -> "${distanceLabel(distanceM, useMetric)} driven"
-                                BannerCard.OPEN -> "${bs.open} open WiFi"
-                                BannerCard.SPEED -> ""
-                            }
-                            AutoSizeText(txt, ink, maxSize = 30.sp, minSize = 15.sp, modifier = Modifier.fillMaxWidth())
-                        }
-                    }
-                }
-            } else if (e.kind == io.github.gitclo.spectra.model.FeedKind.CAPTURE || e.kind == io.github.gitclo.spectra.model.FeedKind.SPOTTED) {
-                CaptureExplosion(e)
-            } else {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    Box(Modifier.size(34.dp).background(ink.copy(alpha = 0.18f), CircleShape), contentAlignment = Alignment.Center) {
-                        Icon(feedIcon(e.kind), null, tint = ink, modifier = Modifier.size(18.dp))
-                    }
-                    Spacer(Modifier.width(10.dp))
-                    Text(e.eyebrow, style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = ink.copy(alpha = 0.72f))
-                    Spacer(Modifier.width(8.dp))
-                    Text(e.title, style = androidx.compose.material3.MaterialTheme.typography.titleMedium, color = ink, maxLines = 1)
-                }
-            }
-        }
-    }
-}
-
-private fun uploadStepLabel(w: SendPhase, d: SendPhase): String? {
-    fun one(svc: String, p: SendPhase): String? = when (p) {
-        SendPhase.WRITING -> "✍️ Writing $svc file"
-        SendPhase.UPLOADING -> "📡 Sending to $svc"
-        SendPhase.SAVING -> "💾 Saving $svc"
-        SendPhase.SENT -> "✅ Sent to $svc"
-        SendPhase.IDLE -> null
-    }
-    val ws = one("WiGLE", w); val ds = one("WDGWars", d)
-    return when {
-        ws != null && ds != null && w == d -> when (w) {
-            SendPhase.WRITING -> "✍️ Writing upload files"
-            SendPhase.UPLOADING -> "📡 Sending → WiGLE + WDGWars"
-            SendPhase.SAVING -> "💾 Saving upload"
-            SendPhase.SENT -> "✅ Sent to WiGLE + WDGWars"
-            SendPhase.IDLE -> null
-        }
-        ws != null && ds != null -> "$ws · $ds"
-        else -> ws ?: ds
-    }
-}
-
-private fun isOpenWifi(caps: String?): Boolean {
-    if (caps.isNullOrBlank()) return false
-    return !caps.contains("WPA") && !caps.contains("WEP") && !caps.contains("RSN") && !caps.contains("SAE") && !caps.contains("EAP")
-}
-
-private fun distanceLabel(m: Double, metric: Boolean): String =
-    if (metric) "%.1f km".format(m / 1000.0) else "%.1f mi".format(m / 1609.344)
-
-private fun speedLabel(mps: Float?, metric: Boolean): String =
-    mps?.let { if (metric) "${Math.round(it * 3.6f)} km/h" else "${Math.round(it * 2.23694f)} mph" }
-        ?: if (metric) "0 km/h" else "0 mph"
-
-private fun headingLabel(bearing: Float?): String {
-    val b = bearing ?: return "—"
-    val dirs = arrayOf("N", "NE", "E", "SE", "S", "SW", "W", "NW")
-    return dirs[Math.round((b % 360f) / 45f) % 8]
-}
-
-@Composable
-private fun CaptureExplosion(e: FeedEvent) {
-
-    val neon = e.colorArgb?.let { Color(it) } ?: Color(0xFFFF2BD1)
-    val neon2 = androidx.compose.ui.graphics.lerp(neon, Color.White, 0.4f)
-    val bg1 = androidx.compose.ui.graphics.lerp(neon, Color.Black, 0.86f)
-    val bg2 = androidx.compose.ui.graphics.lerp(neon, Color.Black, 0.74f)
-
-    val label = if (e.eyebrow.isBlank()) e.title else "${e.eyebrow} ${e.title}"
-    val (fs, ls) = when {
-        label.length > 28 -> 13.sp to 0.5.sp
-        label.length > 22 -> 15.sp to 1.sp
-        label.length > 16 -> 18.sp to 1.5.sp
-        else              -> 22.sp to 2.sp
-    }
-
-    if (UiFlags.reduceMotion) {
-        Box(
-            Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp))
-                .background(Brush.horizontalGradient(listOf(bg1, bg2, bg1)))
-                .border(2.dp, neon, RoundedCornerShape(12.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(label, color = Color.White, fontFamily = AppFont, fontWeight = FontWeight.Black,
-                fontSize = fs, letterSpacing = ls, maxLines = 1, softWrap = false,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 26.dp),
-                style = TextStyle(shadow = Shadow(neon2, blurRadius = 24f)))
-        }
-        return
-    }
-
-    val tr = rememberInfiniteTransition(label = "cap")
-    val pulse by tr.animateFloat(0f, 1f,
-        infiniteRepeatable(tween(520, easing = FastOutSlowInEasing), androidx.compose.animation.core.RepeatMode.Reverse), label = "pulse")
-    val beamPos by tr.animateFloat(0f, 1f, infiniteRepeatable(tween(1150, easing = LinearEasing)), label = "beam")
-    val sweep by tr.animateFloat(0f, 1f, infiniteRepeatable(tween(1050, easing = LinearEasing)), label = "sweep")
-    val textScale = 1f + 0.04f * pulse
-    val glow = 0.55f + 0.45f * pulse
-
-    Box(
-        Modifier.fillMaxSize()
-            .shadow(26.dp, RoundedCornerShape(12.dp), spotColor = neon.copy(alpha = glow), ambientColor = neon)
-            .clip(RoundedCornerShape(12.dp))
-            .background(Brush.horizontalGradient(listOf(bg1, bg2, bg1))),
-        contentAlignment = Alignment.Center
+    androidx.compose.animation.AnimatedVisibility(
+        visible = shown != null,
+        enter = if (UiFlags.reduceMotion) fadeIn() else slideInVertically { -it } + fadeIn(),
+        exit = if (UiFlags.reduceMotion) fadeOut() else slideOutVertically { -it } + fadeOut(),
     ) {
-        Canvas(Modifier.matchParentSize()) {
-            val stroke = 2.5.dp.toPx()
-            val rr = androidx.compose.ui.geometry.RoundRect(
-                stroke, stroke, size.width - stroke, size.height - stroke,
-                androidx.compose.ui.geometry.CornerRadius(12.dp.toPx())
-            )
-            val path = androidx.compose.ui.graphics.Path().apply { addRoundRect(rr) }
-            val pm = androidx.compose.ui.graphics.PathMeasure().apply { setPath(path, true) }
-            val total = pm.length
-            if (total > 0f) {
-                drawPath(path, neon.copy(alpha = 0.2f + 0.3f * pulse), style = Stroke(width = 1.5.dp.toPx()))
-                val beamLen = total * 0.26f
-                for (b in 0..1) {
-                    val head = ((beamPos + b * 0.5f) % 1f) * total
-                    val seg = androidx.compose.ui.graphics.Path()
-                    val end = head + beamLen
-                    if (end <= total) pm.getSegment(head, end, seg, true)
-                    else { pm.getSegment(head, total, seg, true); pm.getSegment(0f, end - total, seg, true) }
-                    drawPath(seg, neon.copy(alpha = 0.55f), style = Stroke(width = 9.dp.toPx(), cap = StrokeCap.Round))
-                    drawPath(seg, Color.White, style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round))
+        // Keep the last content while animating out.
+        var last by remember { mutableStateOf(shown) }
+        if (shown != null) last = shown
+        val v = last ?: return@AnimatedVisibility
+        Surface(shape = MaterialTheme.shapes.large, color = cs.surfaceContainerHigh, modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
+            Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(36.dp).background(v.tint.copy(alpha = 0.18f), CircleShape), contentAlignment = Alignment.Center) {
+                    Icon(v.icon, null, tint = v.tint, modifier = Modifier.size(20.dp))
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(v.label, style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
+                    Text(v.text, style = MaterialTheme.typography.titleSmall, color = cs.onSurface, maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 }
             }
-            val bx = -0.25f * size.width + sweep * 1.5f * size.width
-            drawRect(Brush.linearGradient(
-                0f to Color.Transparent, 0.5f to Color.White.copy(alpha = 0.16f), 1f to Color.Transparent,
-                start = Offset(bx - 70f, 0f), end = Offset(bx + 70f, 0f)))
         }
-
-        Text(
-            label,
-            color = Color.White, fontFamily = AppFont, fontWeight = FontWeight.Black,
-            fontSize = fs, letterSpacing = ls, maxLines = 1, softWrap = false,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 26.dp)
-                .graphicsLayer { scaleX = textScale; scaleY = textScale },
-            style = TextStyle(shadow = Shadow(neon2, blurRadius = 24f))
-        )
     }
 }
 
@@ -538,17 +293,10 @@ fun Dashboard(
     wiglePhase: SendPhase = SendPhase.IDLE,
     wdgwPhase: SendPhase = SendPhase.IDLE,
     uploadStatus: String? = null,
-    hashesThisRun: Long = 0L,
     onSettings: () -> Unit,
     onHelp: () -> Unit,
     radarCollapsed: Boolean = false,
     onRadarCollapsed: (Boolean) -> Unit = {},
-    speedMps: Float? = null,
-    bearingDeg: Float? = null,
-    distanceM: Double = 0.0,
-    discoveryRate: Int = 0,
-    bannerMode: Int = 0,
-    onCycleBannerMode: () -> Unit = {},
     locateRequest: String? = null,
     onLocateHandled: () -> Unit = {},
     toolsOnTop: Boolean = false,
@@ -613,11 +361,7 @@ fun Dashboard(
         item {
             Column {
                 ScanHeader(beast, fwStatus, contacts, scanning, accent, onHelp)
-                Spacer(Modifier.height(12.dp))
-
-                LiveBanner(feed, accent, scanning, contacts, newWifi, speedMps, bearingDeg,
-                    distanceM, discoveryRate, beast is BeastState.Engaged, bannerMode, onCycleBannerMode, useMetric,
-                    wiglePhase, wdgwPhase, uploadStatus = uploadStatus, hashesThisRun = hashesThisRun)
+                EventAlert(feed, uploadStatus)
                 Spacer(Modifier.height(12.dp))
 
                 val sessionCard: @Composable ColumnScope.() -> Unit = {
@@ -828,10 +572,7 @@ private fun ScanHeader(beast: BeastState, fwStatus: String?, contacts: List<Cont
     val cs = MaterialTheme.colorScheme
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
         Column(Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Wardrive", style = MaterialTheme.typography.headlineSmall, color = cs.onSurface)
-                Text(" Go", style = MaterialTheme.typography.headlineSmall, color = accent)
-            }
+            Text("Spectra", style = MaterialTheme.typography.headlineSmall, color = cs.onSurface)
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
                 ScanStateDot(scanning)
                 Spacer(Modifier.width(6.dp))

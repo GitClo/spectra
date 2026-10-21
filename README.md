@@ -28,7 +28,7 @@ listed in [CHANGELOG.md](CHANGELOG.md). Please don't report Spectra bugs to the 
 ## What it does
 
 ### Scan
-The main screen. A live banner, counters for new Wi-Fi, Bluetooth and cell finds (tap one to see
+The main screen. Short alerts when something notable is spotted, counters for new Wi-Fi, Bluetooth and cell finds (tap one to see
 exactly what your next upload will contain), and a tool card with a radar, a device locator (hot
 and cold by signal strength, with optional vibration), a live map, the offensive-devices list, and
 Wi-Fi channel and spectrum analyzers. Below that is everything currently in range, sortable and

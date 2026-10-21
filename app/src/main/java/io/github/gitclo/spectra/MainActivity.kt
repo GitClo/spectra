@@ -298,7 +298,6 @@ private fun App(uiFontScale: Float = 1f, onUiFontScale: (Float) -> Unit = {}) {
 
     var radarCollapsed by remember { mutableStateOf(prefs.getBoolean("radar_collapsed", false)) }
 
-    var bannerMode by remember { mutableStateOf(prefs.getInt("banner_mode", 0)) }
 
     var toolsOnTop by remember { mutableStateOf(prefs.getBoolean("tools_on_top", false)) }
     var startOnBoot by remember { mutableStateOf(prefs.getBoolean("start_on_boot", false)) }
@@ -720,18 +719,8 @@ private fun App(uiFontScale: Float = 1f, onUiFontScale: (Float) -> Unit = {}) {
                 wiglePhase = wiglePhaseUi,
                 wdgwPhase = wdgwPhaseUi,
                 uploadStatus = uploadLineUi,
-                hashesThisRun = hashesThisRunUi,
                 onSettings = { wigleSendAfterSave = false; showWigle = true },
                 onHelp = { go(Screen.Help) },
-                speedMps = speedMps,
-                bearingDeg = bearingDeg,
-                distanceM = distanceM,
-                discoveryRate = discoveryRate,
-                bannerMode = bannerMode,
-                onCycleBannerMode = {
-                    bannerMode = (bannerMode + 1) % 8
-                    prefs.edit().putInt("banner_mode", bannerMode).apply()
-                },
                 radarCollapsed = radarCollapsed,
                 onRadarCollapsed = { collapsed ->
 
