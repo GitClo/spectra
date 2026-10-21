@@ -246,7 +246,7 @@ class WifiScanSource(
     override fun start(onBatch: (List<RawObservation>) -> Unit) {
         sink = onBatch
 
-        val ht = HandlerThread("wardrive-wifi").also { it.start() }
+        val ht = HandlerThread("spectra-wifi").also { it.start() }
         thread = ht
         val handler = Handler(ht.looper)
         val r = object : BroadcastReceiver() {

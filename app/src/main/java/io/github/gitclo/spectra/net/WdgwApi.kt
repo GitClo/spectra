@@ -20,7 +20,7 @@ object WdgwApi {
 
     private fun post(apiKey: String, filename: String, bodyLen: Long, writeFileBody: (DataOutputStream) -> Unit): Result {
         if (apiKey.isBlank()) return Result(false, "Missing WDGWars API key")
-        val boundary = "----WardriveGo${System.currentTimeMillis()}"
+        val boundary = "----Spectra${System.currentTimeMillis()}"
         val preamble = "--$boundary\r\n" +
             "Content-Disposition: form-data; name=\"file\"; filename=\"$filename\"\r\n" +
             "Content-Type: text/csv\r\n\r\n"

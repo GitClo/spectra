@@ -74,14 +74,14 @@ fun Onboarding(
             verticalArrangement = Arrangement.Center
         ) {
         when (step) {
-            0 -> StepCard(Icons.Filled.Bluetooth, accent, "Welcome to Wardrive Go",
-                "I'm trying to make a badass app but your input will make it better.\n\nUse the settings (gear) icon on the Scan screen to find me if you don't know me yet. I'll be working on this until we get it right. Drive safe! -RocketGod 😎🤘",
+            0 -> StepCard(Icons.Filled.Bluetooth, accent, "Welcome to Spectra",
+                "Spectra maps the Wi-Fi, Bluetooth and cell signals around you, recognizes what kind of devices they are, warns you if something seems to be following you, and shows how secure the networks nearby are.\n\nIt's a fork of Wardrive Go by RocketGod, with improvements by sHAM4an. Everything you collect stays on this phone unless you choose to upload or export it.",
                 iconRes = io.github.gitclo.spectra.R.drawable.app_logo)
             1 -> StepCard(Icons.Filled.LocationOn, accent, "Location",
-                "Wardrive Go collects your device location to map (geotag) the Bluetooth, WiFi and cell signals it detects — and Android also requires location permission to scan radios at all. Your location and your finds stay on this device unless you choose to export them.",
+                "Spectra collects your device location to map (geotag) the Bluetooth, WiFi and cell signals it detects — and Android also requires location permission to scan radios at all. Your location and your finds stay on this device unless you choose to export them.",
                 "Grant location", onRequestLocation)
             2 -> StepCard(Icons.Filled.Bluetooth, accent, "Bluetooth",
-                "Nearby-devices permission lets the radar pick up BLE advertisements. Nothing connects — Wardrive Go only listens.",
+                "Nearby-devices permission lets the radar pick up BLE advertisements. Nothing connects — Spectra only listens.",
                 "Grant Bluetooth", onRequestBluetooth)
             3 -> StepCard(Icons.Filled.Wifi, accent, "WiFi scan throttling",
                 "Android limits background WiFi scans to a few per two minutes. Turn off \"Wi-Fi scan throttling\" in Developer Options for a live picture. Optional — the radar works either way.",
@@ -89,7 +89,7 @@ fun Onboarding(
             4 -> StepCard(Icons.Filled.LocationOn, accent, "Mapping your finds",
                 "Every contact gets stamped with your GPS location so you can see it on the map. From the field report you can upload straight to WiGLE and to WDGWars (wdgwars.pl) — new networks only, no duplicates — and climb each service's live leaderboard right inside the app. Nothing leaves your device until you upload or export it yourself.")
             5 -> StepCard(Icons.Filled.Usb, accent, "External Wi-Fi Capabilities",
-                "Here's the big one: run an external Wi-Fi antenna. Plug a supported USB adapter into the phone over OTG and Wardrive Go runs it in parallel with the phone's own radios — no root — merging into the same radar and field report.\n\nMONITOR-MODE — true promiscuous 802.11: access points, the hidden client stations your phone can't see, plus passive WPA hash capture:\n• Atheros AR9271 — Alfa AWUS036NHA, TP-Link TL-WN722N v1 (2.4 GHz)\n• Ralink RT3070/RT5370 — Superwang, TurboTenna Yagi (2.4 GHz)\n• MediaTek MT7612U — Alfa AWUS036ACM, Panda PAU0D AC1200 (2.4 + 5 GHz)\n• Realtek RTL8814AU — Alfa AWUS1900 (4-antenna, 2.4 GHz + 5 GHz ch 36–48 / 149–165)\n• Realtek RTL8821AU — Alfa AWUS036ACS (2.4 GHz only for now)\n\nSERIAL SCANNERS — access-point discovery; firmware auto-detected over native-USB or CP210x, dual-band on ESP32-C5:\n• ESP32 Marauder — JustCallMeKoko wardriver\n• Ghost ESP / GhostESP Revival, Rabbit-Labs Poltergeist\n• Cerberus\n\nA bigger screw-on antenna reaches even further.")
+                "Here's the big one: run an external Wi-Fi antenna. Plug a supported USB adapter into the phone over OTG and Spectra runs it in parallel with the phone's own radios — no root — merging into the same radar and field report.\n\nMONITOR-MODE — true promiscuous 802.11: access points, the hidden client stations your phone can't see, plus passive WPA hash capture:\n• Atheros AR9271 — Alfa AWUS036NHA, TP-Link TL-WN722N v1 (2.4 GHz)\n• Ralink RT3070/RT5370 — Superwang, TurboTenna Yagi (2.4 GHz)\n• MediaTek MT7612U — Alfa AWUS036ACM, Panda PAU0D AC1200 (2.4 + 5 GHz)\n• Realtek RTL8814AU — Alfa AWUS1900 (4-antenna, 2.4 GHz + 5 GHz ch 36–48 / 149–165)\n• Realtek RTL8821AU — Alfa AWUS036ACS (2.4 GHz only for now)\n\nSERIAL SCANNERS — access-point discovery; firmware auto-detected over native-USB or CP210x, dual-band on ESP32-C5:\n• ESP32 Marauder — JustCallMeKoko wardriver\n• Ghost ESP / GhostESP Revival, Rabbit-Labs Poltergeist\n• Cerberus\n\nA bigger screw-on antenna reaches even further.")
             6 -> StepCard(Icons.Filled.Shield, accent, "Keep your home private",
                 "One thing to know before you upload: every network you log is public on WiGLE by location — including your own home Wi-Fi, which would pin your address.\n\nAn exclusion zone fixes that: drop a pin on your home and set a radius, and nothing inside it is ever uploaded (it still shows on your radar). You can also blacklist a single device from its detail screen — handy for things that travel with you, like your phone's hotspot or car — so it's never uploaded anywhere.\n\nSet one up now, or skip and do it anytime from Settings › Privacy & uploads.",
                 "Set up an exclusion zone", onSetupExclusion)
@@ -143,7 +143,7 @@ private fun WardriveCard(accent: Color, on: Boolean, onToggle: (Boolean) -> Unit
         Spacer(Modifier.height(16.dp))
         Text("Wardrive mode", color = Palette.ink, fontFamily = AppFont, fontWeight = FontWeight.Bold, fontSize = 26.sp)
         Spacer(Modifier.height(12.dp))
-        Text("Off by default. When on, Wardrive Go stamps each contact with GPS so you can export a WiGLE-ready CSV. Turn it on only when you mean to map.",
+        Text("Off by default. When on, Spectra stamps each contact with GPS so you can export a WiGLE-ready CSV. Turn it on only when you mean to map.",
             style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(18.dp))
         Row(

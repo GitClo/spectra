@@ -39,7 +39,7 @@ fun PmkidDetailScreen(p: PmkidEntity, accent: Color, onBack: () -> Unit, onMap: 
     val line = remember(p) { PmkidCapture.hashcat22000(listOf(p)) }
 
     fun save(): String {
-        val name = "wardrive-pmkid-${p.bssid.replace(":", "")}.hc22000"
+        val name = "spectra-pmkid-${p.bssid.replace(":", "")}.hc22000"
         if (android.os.Build.VERSION.SDK_INT >= 29) {
             runCatching {
                 val cv = android.content.ContentValues().apply {

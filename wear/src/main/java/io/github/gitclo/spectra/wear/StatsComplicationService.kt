@@ -70,8 +70,8 @@ class StatsComplicationService : SuspendingComplicationDataSourceService() {
 
             ComplicationType.LONG_TEXT -> LongTextComplicationData.Builder(
                 text = text("Wi-Fi $wifi · BT $ble · Cell $cell"),
-                contentDescription = text("Wardrive Go live counts")
-            ).setTitle(text("Wardrive Go")).build()
+                contentDescription = text("Spectra live counts")
+            ).setTitle(text("Spectra")).build()
 
             ComplicationType.SMALL_IMAGE -> SmallImageComplicationData.Builder(
                 smallImage = SmallImage.Builder(

@@ -190,7 +190,7 @@ private fun scanPermissions(): Array<String> {
 const val DEV_EMAIL = "sHAM4an@proton.me"
 
 fun emailCrashToDev(ctx: android.content.Context, text: String) {
-    val subject = "Wardrive Go crash report"
+    val subject = "Spectra crash report"
     val sendto = Intent(Intent.ACTION_SENDTO).apply {
         data = android.net.Uri.parse("mailto:")
         putExtra(Intent.EXTRA_EMAIL, arrayOf(DEV_EMAIL))
@@ -213,7 +213,7 @@ private fun CrashScreen(text: String, onDismiss: () -> Unit) {
     val clip = LocalClipboardManager.current
     val ctx = LocalContext.current
     Column(Modifier.fillMaxSize().background(Palette.paper).verticalScroll(rememberScrollState()).padding(16.dp)) {
-        Text("WarBLE hit an error", color = Palette.danger, fontFamily = AppFont, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+        Text("Spectra hit an error", color = Palette.danger, fontFamily = AppFont, fontWeight = FontWeight.Bold, fontSize = 20.sp)
         Spacer(Modifier.height(4.dp))
         Text("Send it to the dev, or copy it, so it can be fixed.", color = Palette.muted, fontFamily = AppFont, fontSize = 12.sp)
         Spacer(Modifier.height(12.dp))
@@ -778,8 +778,8 @@ private fun App(uiFontScale: Float = 1f, onUiFontScale: (Float) -> Unit = {}) {
                 onCategoryMap = { title, brands ->
                     scope.launch { go(Screen.MapView("$title map", vm.mapPointsByMakers(brands))) }
                 },
-                onExportNew = { exportOnlyNew = true; exportLauncher.launch("WardriveGo-new-${System.currentTimeMillis()}.csv") },
-                onExportAll = { exportOnlyNew = false; exportLauncher.launch("WardriveGo-all.csv") },
+                onExportNew = { exportOnlyNew = true; exportLauncher.launch("Spectra-new-${System.currentTimeMillis()}.csv") },
+                onExportAll = { exportOnlyNew = false; exportLauncher.launch("Spectra-all.csv") },
                 onImport = { importLauncher.launch(arrayOf("*/*")) },
                 onSendWigle = { sendToWigleNow() },
                 onSendWdgw = { sendToWdgwNow() },
@@ -846,7 +846,7 @@ private fun App(uiFontScale: Float = 1f, onUiFontScale: (Float) -> Unit = {}) {
                 onExportPcap = {
                     if (io.github.gitclo.spectra.usb.MonitorCapture.frames.isEmpty())
                         android.widget.Toast.makeText(context, "No monitor frames yet — radio capture is Phase 2", android.widget.Toast.LENGTH_SHORT).show()
-                    else pcapLauncher.launch("wardrive_monitor.pcap")
+                    else pcapLauncher.launch("spectra_monitor.pcap")
                 },
                 onBack = { back() }
             )

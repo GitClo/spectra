@@ -40,9 +40,9 @@
         android:enableOnBackInvokedCallback="true"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
-        android:label="Wardrive Go"
+        android:label="Spectra"
         android:supportsRtl="true"
-        android:theme="@style/Theme.WarBLE">
+        android:theme="@style/Theme.Spectra">
 
         <meta-data
             android:name="com.google.android.gms.car.application"
@@ -57,7 +57,7 @@
             android:launchMode="singleTop"
             android:screenOrientation="user"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
-            android:theme="@style/Theme.WarBLE">
+            android:theme="@style/Theme.Spectra">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

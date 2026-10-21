@@ -45,7 +45,7 @@ fun PmkidScreen(
     fun save(): String {
         val body = payload()
         val stamp = java.text.SimpleDateFormat("yyyyMMdd-HHmmss", java.util.Locale.US).format(java.util.Date())
-        val name = "wardrive-pmkids-$stamp.hc22000"
+        val name = "spectra-pmkids-$stamp.hc22000"
         if (android.os.Build.VERSION.SDK_INT >= 29) {
             runCatching {
                 val cv = android.content.ContentValues().apply {
@@ -73,7 +73,7 @@ fun PmkidScreen(
         val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
             type = "text/plain"
             putExtra(android.content.Intent.EXTRA_TEXT, payload())
-            putExtra(android.content.Intent.EXTRA_SUBJECT, "Wardrive Go PMKID hashlist (hashcat 22000)")
+            putExtra(android.content.Intent.EXTRA_SUBJECT, "Spectra PMKID hashlist (hashcat 22000)")
         }
         runCatching {
             ctx.startActivity(android.content.Intent.createChooser(send, "Share PMKID hashlist")

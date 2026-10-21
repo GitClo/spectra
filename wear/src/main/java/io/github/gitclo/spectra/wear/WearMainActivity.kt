@@ -316,7 +316,7 @@ private fun CrashScreen(text: String, onDismiss: () -> Unit) {
                 Chip(
                     onClick = {
 
-                        val subject = "Wardrive Go (watch) crash"
+                        val subject = "Spectra (watch) crash"
                         val mail = Intent(Intent.ACTION_SENDTO).apply {
                             data = android.net.Uri.parse("mailto:")
                             putExtra(Intent.EXTRA_EMAIL, arrayOf(DEV_EMAIL))
@@ -353,7 +353,7 @@ private fun CrashScreen(text: String, onDismiss: () -> Unit) {
                         runCatching {
                             val send = Intent(Intent.ACTION_SEND).apply {
                                 type = "text/plain"
-                                putExtra(Intent.EXTRA_SUBJECT, "Wardrive Go (watch) crash")
+                                putExtra(Intent.EXTRA_SUBJECT, "Spectra (watch) crash")
                                 putExtra(Intent.EXTRA_TEXT, text)
                             }
                             ctx.startActivity(Intent.createChooser(send, "Share crash"))
@@ -415,7 +415,7 @@ private fun StatsScreen(s: WatchStats?, on: (String) -> Boolean, accent: Long, a
         val u = minOf(maxWidth, maxHeight).value
         if (s == null) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Wardrive Go", fontWeight = FontWeight.Bold, fontSize = (u * 0.10f).sp)
+                Text("Spectra", fontWeight = FontWeight.Bold, fontSize = (u * 0.10f).sp)
                 Spacer(Modifier.height((u * 0.03f).dp))
                 Text("Waiting for phone…", fontSize = (u * 0.06f).sp)
             }

@@ -15,7 +15,7 @@ class SpectraWearApp : Application() {
                 val sw = StringWriter()
                 err.printStackTrace(PrintWriter(sw))
                 val header = buildString {
-                    append("Wardrive Go (watch) crash report\n")
+                    append("Spectra (watch) crash report\n")
                     append("app ${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})\n")
                     append("${Build.MANUFACTURER} ${Build.MODEL} · Wear OS / Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})\n")
                     append("thread: ${thread.name}\n\n")

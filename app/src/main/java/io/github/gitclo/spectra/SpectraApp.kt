@@ -19,7 +19,7 @@ class SpectraApp : Application() {
                 val sw = StringWriter()
                 err.printStackTrace(PrintWriter(sw))
                 val header = buildString {
-                    append("Wardrive Go crash report\n")
+                    append("Spectra crash report\n")
                     append("app ${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})\n")
                     append("${Build.MANUFACTURER} ${Build.MODEL} · Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})\n")
                     append("thread: ${thread.name}\n\n")

@@ -130,7 +130,7 @@ fun HelpScreen(
                 }
         }
     }
-    io.github.gitclo.spectra.ui.components.ScrollScreen(title = "Settings & help", subtitle = "Wardrive Go", onBack = onBack) {
+    io.github.gitclo.spectra.ui.components.ScrollScreen(title = "Settings & help", subtitle = "Spectra", onBack = onBack) {
         Spacer(Modifier.height(4.dp))
 
         SettingsGroup(Icons.Filled.Palette, "Appearance", accent, openGroup) {
@@ -205,7 +205,7 @@ fun HelpScreen(
             Spacer(Modifier.height(8.dp))
             SettingSwitch("Tool console on top", "Put the Tool Center (radar / device) above the stats on the dashboard. Off keeps stats up top and tools below.", toolsOnTop, false, accent, onToolsOnTop)
             Spacer(Modifier.height(8.dp))
-            SettingSwitch("Start on boot", "Relaunch Wardrive Go automatically after the phone restarts, so wardriving resumes on its own (great for a car-mounted phone). On Samsung/OnePlus/Xiaomi you may also need to allow the app's Auto-start in the phone's settings.", startOnBoot, false, accent, onStartOnBoot)
+            SettingSwitch("Start on boot", "Relaunch Spectra automatically after the phone restarts, so wardriving resumes on its own (great for a car-mounted phone). On Samsung/OnePlus/Xiaomi you may also need to allow the app's Auto-start in the phone's settings.", startOnBoot, false, accent, onStartOnBoot)
             Spacer(Modifier.height(8.dp))
             SettingSwitch("Allow upside down", "Add upside-down (180°) portrait to the rotation. Off = regular portrait + landscape only. Respects your phone's auto-rotate lock either way.", allowUpsideDown, false, accent, onAllowUpsideDown)
             Spacer(Modifier.height(8.dp))
@@ -373,7 +373,7 @@ private fun ExternalAdaptersCard(accent: Color) {
         Column {
             Text("External Wi-Fi capabilities", style = androidx.compose.material3.MaterialTheme.typography.titleSmall)
             Spacer(Modifier.height(4.dp))
-            Text("Stock Android can't put its Wi-Fi radio into monitor mode, so client devices stay hidden. Plug in a supported USB adapter over OTG and Wardrive Go taps true monitor mode — no root — running in parallel with the phone's own radios. Its promiscuous 802.11 capture (APs + hidden client stations) merges live into the same radar and field report.",
+            Text("Stock Android can't put its Wi-Fi radio into monitor mode, so client devices stay hidden. Plug in a supported USB adapter over OTG and Spectra taps true monitor mode — no root — running in parallel with the phone's own radios. Its promiscuous 802.11 capture (APs + hidden client stations) merges live into the same radar and field report.",
                 style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(12.dp))
 
@@ -418,7 +418,7 @@ private fun ExternalAdaptersCard(accent: Color) {
             Spacer(Modifier.height(14.dp))
             Text("Hash capture", style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = androidx.compose.material3.MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(4.dp))
-            Text("While the adapter runs, Wardrive Go passively harvests WPA key material from the frames it already sees — no deauth, no injection. It grabs PMKIDs (WPA*01) and full 4-way handshakes (WPA*02) and files each in the Field Report under \"# HASH CAPTURES\". Tap one for its card — SSID, BSSID, channel, signal, location and the ready-to-crack hashcat 22000 line — with copy / save / share and a map link to where you caught it.",
+            Text("While the adapter runs, Spectra passively harvests WPA key material from the frames it already sees — no deauth, no injection. It grabs PMKIDs (WPA*01) and full 4-way handshakes (WPA*02) and files each in the Field Report under \"# HASH CAPTURES\". Tap one for its card — SSID, BSSID, channel, signal, location and the ready-to-crack hashcat 22000 line — with copy / save / share and a map link to where you caught it.",
                 style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
 
             Spacer(Modifier.height(12.dp))

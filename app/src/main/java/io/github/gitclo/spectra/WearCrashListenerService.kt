@@ -31,7 +31,7 @@ class WearCrashListenerService : WearableListenerService() {
         val send = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
             putExtra(Intent.EXTRA_EMAIL, arrayOf(DEV_EMAIL))
-            putExtra(Intent.EXTRA_SUBJECT, "Wardrive Go (watch) crash report")
+            putExtra(Intent.EXTRA_SUBJECT, "Spectra (watch) crash report")
             putExtra(Intent.EXTRA_TEXT, text)
         }
         val chooser = Intent.createChooser(send, "Send watch crash to dev").apply {

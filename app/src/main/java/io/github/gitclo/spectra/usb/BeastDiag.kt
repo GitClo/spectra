@@ -13,7 +13,7 @@ object BeastDiag {
     }
 
     private fun header(): String =
-        "=== Wardrive Go · diagnostic logs ===\n" +
+        "=== Spectra · diagnostic logs ===\n" +
             "app: $appVer\n" +
             "device: ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL} (${android.os.Build.DEVICE}/${android.os.Build.PRODUCT})\n" +
             "android: ${android.os.Build.VERSION.RELEASE} · SDK ${android.os.Build.VERSION.SDK_INT}\n" +

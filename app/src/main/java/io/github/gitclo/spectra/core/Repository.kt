@@ -496,7 +496,7 @@ class Repository(private val context: Context, private val scope: CoroutineScope
     }
 
     private fun lane(name: String) =
-        java.util.concurrent.Executors.newSingleThreadExecutor { r -> Thread(r, "wardrive-$name") }.asCoroutineDispatcher()
+        java.util.concurrent.Executors.newSingleThreadExecutor { r -> Thread(r, "spectra-$name") }.asCoroutineDispatcher()
     private val ingestBle = lane("ingest-ble")
     private val ingestWifi = lane("ingest-wifi")
     private val ingestCell = lane("ingest-cell")
@@ -1183,7 +1183,7 @@ class Repository(private val context: Context, private val scope: CoroutineScope
             return@withContext ChunkedSend(true, nothingNew = true, 0, 0, 0, why)
         }
 
-        val tmp = java.io.File(context.cacheDir, "wardrive_wigle_upload.csv.gz")
+        val tmp = java.io.File(context.cacheDir, "spectra_wigle_upload.csv.gz")
         val counts = try {
             java.util.zip.GZIPOutputStream(tmp.outputStream()).bufferedWriter().use { w ->
                 streamCsv(w, appRelease, requireLocation = true) { a, n -> dao.notInWigleAfter(a, n) }
@@ -1233,7 +1233,7 @@ class Repository(private val context: Context, private val scope: CoroutineScope
             io.github.gitclo.spectra.usb.BeastDiag.log("WDGWars send: nothing to upload — ${why ?: "all already in WDGWars"}")
             return@withContext ChunkedSend(true, nothingNew = true, 0, 0, 0, why)
         }
-        val tmp = java.io.File(context.cacheDir, "wardrive_wdgw_upload.csv")
+        val tmp = java.io.File(context.cacheDir, "spectra_wdgw_upload.csv")
         val counts = try {
             tmp.bufferedWriter().use { w -> streamCsv(w, appRelease, requireLocation = true) { a, n -> dao.notInWdgwAfter(a, n) } }
         } catch (e: Throwable) { runCatching { tmp.delete() }; throw e }

@@ -22,7 +22,7 @@ object WigleApi {
     private fun post(apiName: String, apiToken: String, filename: String, donate: Boolean, fileContentType: String, bodyLen: Long, writeFileBody: (DataOutputStream) -> Unit): Result {
         if (apiName.isBlank() || apiToken.isBlank())
             return Result(false, "Missing WiGLE API Name / Token")
-        val boundary = "----WardriveGo${System.currentTimeMillis()}"
+        val boundary = "----Spectra${System.currentTimeMillis()}"
 
         val preamble = buildString {
             if (donate) append("--$boundary\r\nContent-Disposition: form-data; name=\"donate\"\r\n\r\non\r\n")

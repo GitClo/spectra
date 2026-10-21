@@ -61,7 +61,7 @@ fun BeastDiagDialog(accent: Color, provider: () -> String, onClose: () -> Unit,
         val payload = (clipProvider ?: provider).invoke()
         val stamp = java.text.SimpleDateFormat("yyyyMMdd-HHmmss", java.util.Locale.US)
             .format(java.util.Date())
-        val name = "wardrive-diag-$stamp.txt"
+        val name = "spectra-diag-$stamp.txt"
 
         if (android.os.Build.VERSION.SDK_INT >= 29) {
             runCatching {
@@ -109,7 +109,7 @@ fun BeastDiagDialog(accent: Color, provider: () -> String, onClose: () -> Unit,
             } else {
                 putExtra(android.content.Intent.EXTRA_TEXT, (clipProvider ?: provider).invoke())
             }
-            putExtra(android.content.Intent.EXTRA_SUBJECT, "Wardrive Go diagnostics")
+            putExtra(android.content.Intent.EXTRA_SUBJECT, "Spectra diagnostics")
         }
         runCatching {
             ctx.startActivity(android.content.Intent.createChooser(send, "Share diagnostics")

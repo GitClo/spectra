@@ -47,7 +47,7 @@ from the device (`help` output + probing), 2026-07-31. For review of what the bo
   board's RGB LEDs are driven internally by the firmware per mode.
 - No `wardrive`, `channel`, or `gps` command exists.
 
-## What the Wardrive Go integration uses
+## What the Spectra integration uses
 `usb/GhostEsp.kt` + `usb/CdcAcm.kt`: opens the native-USB CDC-ACM port, handshakes (`help` → confirms the
 `Ghost ESP` banner, since `303A:1001` is a generic native-USB ESP32 id), then loops `scanap` → `list -a`,
 parses the AP rows above (SSID / BSSID / RSSI / vendor→maker), and feeds them into the standard

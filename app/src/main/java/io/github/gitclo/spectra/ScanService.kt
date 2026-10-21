@@ -41,7 +41,7 @@ class ScanService : Service() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
         val notif: Notification = Notification.Builder(this, CHANNEL)
-            .setContentTitle("Wardrive Go")
+            .setContentTitle("Spectra")
             .setContentText("Scanning for signals…")
             .setSmallIcon(R.drawable.ic_stat_wardrive)
             .setContentIntent(tap)
@@ -66,7 +66,7 @@ class ScanService : Service() {
     }
 
     companion object {
-        private const val CHANNEL = "wardrive_scan"
+        private const val CHANNEL = "spectra_scan"
         private const val NOTIF_ID = 1
     }
 }

@@ -45,7 +45,7 @@ import java.io.InputStream
 
 enum class SendPhase { IDLE, WRITING, UPLOADING, SAVING, SENT }
 
-private const val SPOT_CHANNEL = "wardrive_spot"
+private const val SPOT_CHANNEL = "spectra_spot"
 
 class SpectraViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -670,7 +670,7 @@ class SpectraViewModel(app: Application) : AndroidViewModel(app) {
         val seqKey = "export_seq_$service"
         val n = prefs.getInt(seqKey, 0) + 1
         prefs.edit().putInt(seqKey, n).apply()
-        return "WardriveGo-$handle-$n.csv"
+        return "Spectra-$handle-$n.csv"
     }
 
     private suspend fun ensureWdgwUsername(key: String) {
@@ -814,7 +814,7 @@ class SpectraViewModel(app: Application) : AndroidViewModel(app) {
 
     companion object {
 
-        val RELEASE = "WardriveGo-android-${BuildConfig.VERSION_NAME}"
+        val RELEASE = "Spectra-android-${BuildConfig.VERSION_NAME}"
         val EMPTY_STATS = Stats(0, 0, 0, 0, 0, 0, 0, emptyList())
     }
 }
