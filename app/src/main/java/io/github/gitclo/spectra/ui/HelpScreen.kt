@@ -220,9 +220,9 @@ fun HelpScreen(
         }
 
         SettingsGroup(Icons.Filled.SystemUpdate, "Updates & maintenance", accent, openGroup) {
-            LinkButton(Icons.Filled.SystemUpdate, "Check for updates", "Update Wardrive Go to the latest available build", accent, deep, filled = true) { onCheckUpdates() }
+            LinkButton(Icons.Filled.SystemUpdate, "Check for updates", "Compare with the latest release on GitHub", accent, deep, filled = true) { onCheckUpdates() }
             Spacer(Modifier.height(10.dp))
-            LinkButton(Icons.Filled.Watch, "Install / update watch app", "Open Wardrive Go on your paired Wear OS watch to install or update it", accent, deep, filled = true) { onUpdateWatch() }
+            LinkButton(Icons.Filled.Watch, "Install / update watch app", "Get the Wear OS APK from the latest GitHub release", accent, deep, filled = true) { onUpdateWatch() }
             Spacer(Modifier.height(10.dp))
             LinkButton(Icons.Filled.BatteryFull, "Allow background (battery)", "Stop aggressive phones (OnePlus, etc.) killing background scans", accent, deep, filled = true) { onBatterySettings() }
             Spacer(Modifier.height(10.dp))
@@ -244,15 +244,15 @@ fun HelpScreen(
         }
 
         SettingsGroup(Icons.Filled.Favorite, "About & credits", accent, openGroup) {
-            LinkButton(Icons.Filled.Language, "The developer", "betaskynet.com", accent, deep, filled = true) { uri.openUri("https://betaskynet.com") }
+            LinkButton(Icons.Filled.Language, "Source code & releases", "github.com/GitClo/spectra", accent, deep, filled = true) {
+                uri.openUri(io.github.gitclo.spectra.AppUpdates.REPO_URL)
+            }
             Spacer(Modifier.height(10.dp))
-            LinkButton(Icons.Filled.Favorite, "Credits", if (showCredits) "Tap to hide" else "WiGLE, WDGWars & special thanks", accent, deep, filled = true) { showCredits = !showCredits }
+            LinkButton(Icons.Filled.Favorite, "Credits", if (showCredits) "Tap to hide" else "WiGLE, WDGWars, Wardrive Go & special thanks", accent, deep, filled = true) { showCredits = !showCredits }
             if (showCredits) {
                 Spacer(Modifier.height(10.dp))
                 CreditsCard(accent, deep, uri)
             }
-            Spacer(Modifier.height(10.dp))
-            LinkButton(Icons.Filled.EmojiEvents, "The Pirates", "Join the hangout on Discord", accent, deep, filled = true) { uri.openUri("https://discord.gg/thepirates") }
         }
 
         Spacer(Modifier.height(16.dp))
@@ -353,6 +353,13 @@ private fun CreditsCard(accent: Color, deep: Color, uri: androidx.compose.ui.pla
         LinkButton(Icons.Filled.Language, "WiGLE.net", "The database we all feed", accent, deep, filled = false) { uri.openUri("https://wigle.net") }
         Spacer(Modifier.height(10.dp))
         LinkButton(Icons.Filled.Language, "WDGWars", "wdgwars.pl — Watch Dogs Go wardriving arena", accent, deep, filled = false) { uri.openUri("https://wdgwars.pl") }
+        Spacer(Modifier.height(12.dp))
+        Text("Special thanks to RocketGod for making the \"Wardrive Go\" app. He made most of the stuff, I've just added some improvements I wanted. -sHAM4an",
+            style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
+        Spacer(Modifier.height(8.dp))
+        LinkButton(Icons.Filled.Language, "Wardrive Go", "github.com/RocketGod-git/wardrive-go", accent, deep, filled = false) {
+            uri.openUri("https://github.com/RocketGod-git/wardrive-go")
+        }
     }
 }
 

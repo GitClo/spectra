@@ -186,7 +186,8 @@ private fun scanPermissions(): Array<String> {
     return p.toTypedArray()
 }
 
-const val DEV_EMAIL = "rocketgod666@gmail.com"
+/** Crash reports go to the Spectra maintainer. */
+const val DEV_EMAIL = "sHAM4an@proton.me"
 
 fun emailCrashToDev(ctx: android.content.Context, text: String) {
     val subject = "Wardrive Go crash report"
@@ -578,10 +579,6 @@ private fun App(uiFontScale: Float = 1f, onUiFontScale: (Float) -> Unit = {}) {
         }
     }
 
-    val updateLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartIntentSenderForResult()
-    ) { }
-
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -956,8 +953,8 @@ private fun App(uiFontScale: Float = 1f, onUiFontScale: (Float) -> Unit = {}) {
                 },
                 onApiSettings = { wigleSendAfterSave = false; wdgwSendAfterSave = false; showWigle = true },
                 onPrivacy = { go(Screen.Privacy) },
-                onCheckUpdates = { AppUpdates.checkForUpdate(context, scope, updateLauncher) },
-                onUpdateWatch = { AppUpdates.openWatchPlayStore(context, scope) },
+                onCheckUpdates = { AppUpdates.checkForUpdate(context, scope) },
+                onUpdateWatch = { AppUpdates.openWatchReleases(context) },
                 onReplayOnboarding = { onboarded = false }, onBack = { back() }
             )
         }

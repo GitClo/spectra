@@ -13,8 +13,8 @@ android {
         applicationId = "io.github.gitclo.spectra"
         minSdk = 26
         targetSdk = 36
-        versionCode = 573
-        versionName = "2.0.34"
+        versionCode = 1
+        versionName = "1.0.0"
         vectorDrawables { useSupportLibrary = true }
     }
 
@@ -79,7 +79,6 @@ dependencies {
     implementation("com.google.android.gms:play-services-location:21.3.0")
     implementation("com.google.android.gms:play-services-wearable:18.2.0")
     implementation("org.osmdroid:osmdroid-android:6.1.20")
-    implementation("com.google.android.play:app-update-ktx:2.1.0")
     implementation("androidx.wear:wear-remote-interactions:1.1.0")
     implementation("androidx.car.app:app:1.4.0")
 

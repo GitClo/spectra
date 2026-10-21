@@ -81,7 +81,7 @@ import com.google.android.gms.wearable.Wearable
 
 private const val STATS_PATH = "/spectra/stats"
 
-private const val DEV_EMAIL = "rocketgod666@gmail.com"
+private const val DEV_EMAIL = "sHAM4an@proton.me"
 
 private const val ACCENT = "accent"
 private const val ACCENT_DEFAULT = 0xFF37ECCBL

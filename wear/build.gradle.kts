@@ -12,8 +12,9 @@ android {
         applicationId = "io.github.gitclo.spectra"
         minSdk = 30
         targetSdk = 36
-        versionCode = 1000573
-        versionName = "2.0.34"
+        // Wear APK versionCode = 1_000_000 + phone versionCode, so both can ship under one applicationId.
+        versionCode = 1000001
+        versionName = "1.0.0"
         vectorDrawables { useSupportLibrary = true }
     }
 
