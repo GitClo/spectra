@@ -49,6 +49,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -74,6 +75,31 @@ import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.QueryStats
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Radar
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.UnfoldLess
+import androidx.compose.material.icons.filled.UnfoldMore
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.Badge
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -133,7 +159,7 @@ fun pressable(onClick: () -> Unit): Pair<Modifier, Float> {
 private fun RollingNumber(value: Long, color: Color, fontSize: TextUnit, shadow: Shadow? = null, compact: Boolean = false) {
     val text = if (compact) fmtCompact(value) else fmtGrouped(value)
     val style = TextStyle(
-        fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = fontSize, color = color, shadow = shadow
+        fontFamily = AppFont, fontWeight = FontWeight.Bold, fontSize = fontSize, color = color, shadow = shadow
     )
 
     if (UiFlags.reduceMotion) {
@@ -160,43 +186,6 @@ private fun RollingNumber(value: Long, color: Color, fontSize: TextUnit, shadow:
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun RunScore(label: String, value: Long, accent: Color, modifier: Modifier, onPickAll: () -> Unit) {
-    val scale = remember { Animatable(1f) }
-    var prev by remember { mutableStateOf(value) }
-    LaunchedEffect(value) {
-        if (value > prev && !UiFlags.reduceMotion) {
-
-            scale.animateTo(1.9f, spring(dampingRatio = 0.3f, stiffness = 2400f))
-            scale.animateTo(1f, spring(dampingRatio = 0.42f, stiffness = 120f))
-        }
-        prev = value
-    }
-    val s = scale.value
-    val popping = s > 1.05f
-    val wobble = (s - 1f) * 6f
-    Column(
-        modifier.combinedClickable(onClick = onPickAll, onLongClick = onPickAll),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(Modifier.graphicsLayer { scaleX = s; scaleY = s; rotationZ = wobble }, contentAlignment = Alignment.Center) {
-            RollingNumber(value, accent, 25.sp, if (popping) Shadow(accent.copy(alpha = 0.9f), Offset.Zero, 22f) else null)
-        }
-        Spacer(Modifier.height(4.dp))
-        Text(label, color = Palette.muted, fontFamily = Mono, fontSize = 12.sp)
-    }
-}
-
-@Composable
-private fun Tally(label: String, value: Long, color: Color, modifier: Modifier) {
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        RollingNumber(value, color, 25.sp, compact = true)
-        Spacer(Modifier.height(4.dp))
-        Text(label, color = Palette.muted, fontFamily = Mono, fontSize = 12.sp)
-    }
-}
-
 private enum class BannerCard { NEW, SPLIT, HASH, RATE, DISTANCE, OPEN, SPEED }
 private class BannerStats(val phoneAp: Int, val extAp: Int, val totalAp: Int, val open: Int)
 
@@ -205,13 +194,22 @@ internal fun AutoSizeText(text: String, color: Color, maxSize: TextUnit, minSize
                         modifier: Modifier = Modifier) {
 
     var fs by remember(text.length, maxSize) { mutableStateOf(maxSize) }
-    Text(text, color = color, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = fs,
+    Text(text, color = color, fontFamily = AppFont, fontWeight = FontWeight.Bold, fontSize = fs,
         maxLines = 1, softWrap = false, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         onTextLayout = { r -> if (r.hasVisualOverflow && fs.value > minSize.value) fs = (fs.value * 0.92f).sp },
         modifier = modifier)
 }
 
-private enum class DashTool(val label: String) { RADAR("Radar"), DEVICE("Device"), LOCATOR("Device Locator"), MAP("Finds Map"), THREAT("Offensive Devices"), CHANNELS("Channel Analyzer"), SPECTRUM("Spectrum Analyzer") }
+/** Tools in the Scan screen's tool card. Ordinals are persisted ("tool_ord"); append only. */
+private enum class DashTool(val label: String, val icon: ImageVector) {
+    RADAR("Radar", Icons.Filled.Radar),
+    DEVICE("Adapter", Icons.Filled.Bolt),
+    LOCATOR("Locator", Icons.Filled.GpsFixed),
+    MAP("Map", Icons.Filled.Map),
+    THREAT("Offensive", Icons.Filled.Security),
+    CHANNELS("Channels", Icons.Filled.BarChart),
+    SPECTRUM("Spectrum", Icons.Filled.GraphicEq),
+}
 
 @Composable
 private fun LiveBanner(
@@ -306,12 +304,12 @@ private fun LiveBanner(
                     val a by tr.animateFloat(0.5f, 1f,
                         infiniteRepeatable(tween(600), androidx.compose.animation.core.RepeatMode.Reverse), label = "a")
                     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text(uploadStep, color = ink.copy(alpha = a), fontFamily = Mono, fontWeight = FontWeight.Bold,
+                        Text(uploadStep, color = ink.copy(alpha = a), fontFamily = AppFont, fontWeight = FontWeight.Bold,
                             fontSize = 17.sp, maxLines = 1, softWrap = false)
                     }
                 } else if (!scanning) {
                     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text("Paused", color = ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 26.sp, maxLines = 1)
+                        Text("Paused", color = ink, fontFamily = AppFont, fontWeight = FontWeight.Bold, fontSize = 26.sp, maxLines = 1)
                     }
                 } else {
                     AnimatedContent(
@@ -325,11 +323,11 @@ private fun LiveBanner(
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                 Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
                                     Text(if ((speedMps ?: 0f) > 1f) headingLabel(bearingDeg) else "—",
-                                        color = ink.copy(alpha = 0.78f), fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 17.sp, maxLines = 1, softWrap = false)
+                                        style = androidx.compose.material3.MaterialTheme.typography.titleMedium, color = ink.copy(alpha = 0.78f), maxLines = 1, softWrap = false)
                                 }
-                                Text(speedLabel(speedMps, useMetric), color = ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 24.sp, maxLines = 1, softWrap = false)
+                                Text(speedLabel(speedMps, useMetric), style = androidx.compose.material3.MaterialTheme.typography.headlineSmall, color = ink, maxLines = 1, softWrap = false)
                                 Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
-                                    Text(distanceLabel(distanceM, useMetric), color = ink.copy(alpha = 0.78f), fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 17.sp, maxLines = 1, softWrap = false)
+                                    Text(distanceLabel(distanceM, useMetric), style = androidx.compose.material3.MaterialTheme.typography.titleMedium, color = ink.copy(alpha = 0.78f), maxLines = 1, softWrap = false)
                                 }
                             }
                         } else if (c == BannerCard.NEW) {
@@ -362,9 +360,9 @@ private fun LiveBanner(
                         Icon(feedIcon(e.kind), null, tint = ink, modifier = Modifier.size(18.dp))
                     }
                     Spacer(Modifier.width(10.dp))
-                    Text(e.eyebrow, color = ink.copy(alpha = 0.72f), fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text(e.eyebrow, style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = ink.copy(alpha = 0.72f))
                     Spacer(Modifier.width(8.dp))
-                    Text(e.title, color = ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 18.sp, maxLines = 1)
+                    Text(e.title, style = androidx.compose.material3.MaterialTheme.typography.titleMedium, color = ink, maxLines = 1)
                 }
             }
         }
@@ -434,7 +432,7 @@ private fun CaptureExplosion(e: FeedEvent) {
                 .border(2.dp, neon, RoundedCornerShape(12.dp)),
             contentAlignment = Alignment.Center
         ) {
-            Text(label, color = Color.White, fontFamily = Mono, fontWeight = FontWeight.Black,
+            Text(label, color = Color.White, fontFamily = AppFont, fontWeight = FontWeight.Black,
                 fontSize = fs, letterSpacing = ls, maxLines = 1, softWrap = false,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -489,7 +487,7 @@ private fun CaptureExplosion(e: FeedEvent) {
 
         Text(
             label,
-            color = Color.White, fontFamily = Mono, fontWeight = FontWeight.Black,
+            color = Color.White, fontFamily = AppFont, fontWeight = FontWeight.Black,
             fontSize = fs, letterSpacing = ls, maxLines = 1, softWrap = false,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -506,6 +504,7 @@ private fun feedIcon(k: FeedKind): ImageVector = when (k) {
     else -> Icons.Filled.EmojiEvents
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun Dashboard(
     stats: Stats,
@@ -563,12 +562,17 @@ fun Dashboard(
     loadMapMarkersIn: suspend (Double, Double, Double, Double) -> List<MapMarker> = { _, _, _, _ -> emptyList() },
     onOpenMapMarker: (MapMarker) -> Unit = {},
     onOpenMapPoint: (String) -> Unit = {},
-    mapSeedCenter: suspend () -> Pair<Double, Double>? = { null }
+    mapSeedCenter: suspend () -> Pair<Double, Double>? = { null },
+    onCategory: (com.rocketgod.warble.domain.model.DeviceCategory) -> Unit = {},
+    /** Open the list behind one of the NEW Wi-Fi / Bluetooth / Cell counters. */
+    onNewFinds: (SignalType) -> Unit = {},
 ) {
-    val accent = Color(skin.accentHex)
-
-    val wifiColor = skin.wifiHex?.let { Color(it) } ?: accent
-    val deep = Color(skin.deepHex)
+    val cs = MaterialTheme.colorScheme
+    val accent = cs.primary
+    // WiGLE-style skins define their own per-radio colors; others use the theme.
+    val wifiColor = skin.wifiHex?.let { Color(it) } ?: cs.primary
+    val bleColor = skin.bleHex?.let { Color(it) } ?: cs.tertiary
+    val cellColor = skin.cellHex?.let { Color(it) } ?: cs.secondary
 
     val tools = if (beast is BeastState.Engaged) listOf(DashTool.RADAR, DashTool.DEVICE, DashTool.LOCATOR, DashTool.MAP, DashTool.THREAT, DashTool.CHANNELS, DashTool.SPECTRUM)
                 else listOf(DashTool.RADAR, DashTool.LOCATOR, DashTool.MAP, DashTool.THREAT, DashTool.CHANNELS, DashTool.SPECTRUM)
@@ -601,369 +605,385 @@ fun Dashboard(
         }
     }
 
-    LazyColumn(state = listState, modifier = Modifier.fillMaxWidth().background(Palette.paper).padding(horizontal = 16.dp)) {
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxWidth().background(cs.surface),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp)
+    ) {
         item {
+            Column {
+                ScanHeader(beast, fwStatus, contacts, scanning, accent, onHelp)
+                Spacer(Modifier.height(12.dp))
 
-            Column(if (!radarCollapsed) Modifier.fillParentMaxHeight() else Modifier) {
-            Spacer(Modifier.height(14.dp))
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Filled.Wifi, null, tint = accent, modifier = Modifier.size(24.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("War", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 30.sp)
-                Text("drive", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 30.sp)
-                Text(" Go", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 30.sp)
-                Spacer(Modifier.width(8.dp))
-                if (beast is BeastState.Engaged) {
-                    Spacer(Modifier.width(8.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.background(accent, RoundedCornerShape(7.dp)).padding(horizontal = 8.dp, vertical = 4.dp)
+                LiveBanner(feed, accent, scanning, contacts, newWifi, speedMps, bearingDeg,
+                    distanceM, discoveryRate, beast is BeastState.Engaged, bannerMode, onCycleBannerMode, useMetric,
+                    wiglePhase, wdgwPhase, uploadStatus = uploadStatus, hashesThisRun = hashesThisRun)
+                Spacer(Modifier.height(12.dp))
+
+                val sessionCard: @Composable ColumnScope.() -> Unit = {
+                    ElevatedCard(
+                        colors = CardDefaults.elevatedCardColors(containerColor = cs.surfaceContainerLow),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(Icons.Filled.Bolt, null, tint = inkOn(accent), modifier = Modifier.size(13.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("BEAST", color = inkOn(accent), fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1, softWrap = false)
+                        Column(Modifier.padding(12.dp)) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                NewFindTile("New Wi-Fi", Icons.Filled.Wifi, newWifi, wifiColor, Modifier.weight(1f), pop = true) { onNewFinds(SignalType.WIFI) }
+                                NewFindTile("New Bluetooth", Icons.Filled.Bluetooth, newBle, bleColor, Modifier.weight(1f)) { onNewFinds(SignalType.BLE) }
+                                NewFindTile("New cell", Icons.Filled.CellTower, newCell, cellColor, Modifier.weight(1f)) { onNewFinds(SignalType.CELL) }
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            SatelliteContent(gnss, accent, onSatellites)
+                        }
                     }
                 }
-                Spacer(Modifier.weight(1f))
 
-                Icon(Icons.Filled.Settings, "settings", tint = Palette.muted, modifier = Modifier.size(26.dp).clickable { onHelp() })
-            }
-
-            when {
-                beast is BeastState.Engaged && fwStatus != null ->
-                    Text("⚡ ${reconcileHeader(fwStatus, contacts)}", color = accent, fontFamily = Mono, fontSize = 11.sp,
-                        modifier = Modifier.padding(top = 4.dp))
-                fwStatus != null ->
-                    Text("Adapter disconnected · on-board scanning", color = Palette.muted, fontFamily = Mono, fontSize = 11.sp,
-                        modifier = Modifier.padding(top = 4.dp))
-            }
-            Spacer(Modifier.height(12.dp))
-
-            LiveBanner(feed, accent, scanning, contacts, newWifi, speedMps, bearingDeg,
-                distanceM, discoveryRate, beast is BeastState.Engaged, bannerMode, onCycleBannerMode, useMetric,
-                wiglePhase, wdgwPhase, uploadStatus = uploadStatus, hashesThisRun = hashesThisRun)
-            Spacer(Modifier.height(12.dp))
-
-            val sessionCard: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {
-                Column(
-                    Modifier.fillMaxWidth().border(1.dp, Palette.line, RoundedCornerShape(14.dp))
-                        .background(Palette.surface, RoundedCornerShape(14.dp)).padding(vertical = 14.dp, horizontal = 8.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        RunScore("NEW WIFI", newWifi, wifiColor, Modifier.weight(1f), onPickAll = {})
-                        VDivider()
-                        Tally("NEW BLUETOOTH", newBle, Palette.bluetooth, Modifier.weight(1f))
-                        VDivider()
-                        Tally("NEW CELL", newCell, Palette.cell, Modifier.weight(1f))
+                // The tool card gets a guaranteed height rather than whatever is left of the
+                // first screen, so the radar and locator always have room; the page scrolls.
+                val screenH = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp
+                val toolHeight = maxOf(screenH * 0.6f, 440.dp)
+                val toolCenter: @Composable ColumnScope.() -> Unit = {
+                    if (!radarCollapsed) {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = cs.surfaceContainerLow),
+                            modifier = Modifier.fillMaxWidth().height(toolHeight)
+                        ) {
+                            Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()).padding(start = 4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    tools.forEach { t ->
+                                        FilterChip(
+                                            selected = t == tool, onClick = { onToolOrd(t.ordinal) },
+                                            label = { Text(t.label, maxLines = 1) },
+                                            leadingIcon = { Icon(t.icon, null, Modifier.size(FilterChipDefaults.IconSize)) }
+                                        )
+                                    }
+                                }
+                                IconButton(onClick = { onRadarCollapsed(true) }) {
+                                    Icon(Icons.Filled.UnfoldLess, "Hide tools")
+                                }
+                            }
+                            Box(Modifier.fillMaxWidth().weight(1f).padding(start = 12.dp, end = 12.dp, bottom = 12.dp)
+                                .clip(MaterialTheme.shapes.medium)) {
+                                when (tool) {
+                                    DashTool.RADAR -> Radar(contacts, accent, radarPaint = skin.radarPaint, onSelect = onSelect)
+                                    DashTool.DEVICE -> DeviceReadout(beast, fwStatus, contacts, accent)
+                                    DashTool.LOCATOR -> DeviceLocator(
+                                        target = if (trackKey != null) contacts.firstOrNull { it.key == trackKey }
+                                                 else contacts.maxByOrNull { it.smoothRssi },
+                                        chosen = trackKey != null,
+                                        accent = accent,
+                                        onChooseDevice = { scope.launch { listState.animateScrollToItem(1) } }
+                                    )
+                                    DashTool.MAP -> FindsMapTool(
+                                        accent = accent,
+                                        currentPose = currentPose,
+                                        loadPointsIn = loadMapPointsIn,
+                                        onOpenFull = onOpenFullMap,
+                                        loadMarkersIn = loadMapMarkersIn,
+                                        onMarkerTap = onOpenMapMarker,
+                                        onOpenPoint = onOpenMapPoint,
+                                        seedCenter = mapSeedCenter
+                                    )
+                                    DashTool.THREAT -> ThreatScopeTool(contacts, accent, onSelect = onSelect)
+                                    DashTool.CHANNELS -> ChannelAnalyzerTool(contacts, accent)
+                                    DashTool.SPECTRUM -> SpectrumAnalyzerTool(contacts, accent)
+                                }
+                            }
+                        }
+                    } else {
+                        RadarCollapsedBar(stats, liveCount, accent) { onRadarCollapsed(false) }
                     }
-                    Spacer(Modifier.height(12.dp))
-                    Box(Modifier.fillMaxWidth().height(1.dp).background(Palette.line.copy(alpha = 0.4f)))
-                    Spacer(Modifier.height(12.dp))
-                    SatelliteContent(gnss, accent, onSatellites)
                 }
-            }
-
-            val toolCenter: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {
-                if (!radarCollapsed) {
-                    Box(
-                        Modifier.fillMaxWidth().weight(1f)
-                            .border(1.dp, accent.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
-                            .background(Palette.surface, RoundedCornerShape(12.dp)).padding(12.dp)
-                    ) {
-                        when (tool) {
-                            DashTool.RADAR -> Radar(contacts, accent, radarPaint = skin.radarPaint, onSelect = onSelect)
-                            DashTool.DEVICE -> DeviceReadout(beast, fwStatus, contacts, accent)
-                            DashTool.LOCATOR -> DeviceLocator(
-                                target = if (trackKey != null) contacts.firstOrNull { it.key == trackKey }
-                                         else contacts.maxByOrNull { it.smoothRssi },
-                                chosen = trackKey != null,
-                                accent = accent,
-                                onChooseDevice = { scope.launch { listState.animateScrollToItem(1) } }
-                            )
-                            DashTool.MAP -> FindsMapTool(
-                                accent = accent,
-                                currentPose = currentPose,
-                                loadPointsIn = loadMapPointsIn,
-                                onOpenFull = onOpenFullMap,
-                                loadMarkersIn = loadMapMarkersIn,
-                                onMarkerTap = onOpenMapMarker,
-                                onOpenPoint = onOpenMapPoint,
-                                seedCenter = mapSeedCenter
-                            )
-                            DashTool.THREAT -> ThreatScopeTool(contacts, accent, onSelect = onSelect)
-                            DashTool.CHANNELS -> ChannelAnalyzerTool(contacts, accent)
-                            DashTool.SPECTRUM -> SpectrumAnalyzerTool(contacts, accent)
-                        }
-
-                        if (tools.size > 1) {
-                            ToolSwitchButton(
-                                accent,
-                                Modifier.align(Alignment.TopStart).zIndex(1f).padding(6.dp)
-                            ) { onToolOrd(tools[(tools.indexOf(tool).coerceAtLeast(0) + 1) % tools.size].ordinal) }
-                        }
-
-                        Box(
-                            Modifier.align(Alignment.TopEnd).zIndex(1f).padding(6.dp).size(30.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Palette.surface, RoundedCornerShape(8.dp))
-                                .border(1.dp, Palette.line, RoundedCornerShape(8.dp))
-                                .clickable { onRadarCollapsed(true) },
-                            contentAlignment = Alignment.Center
-                        ) { Icon(Icons.Filled.Remove, "collapse tool center", tint = accent, modifier = Modifier.size(18.dp)) }
-                    }
+                if (toolsOnTop) {
+                    toolCenter(); Spacer(Modifier.height(12.dp)); sessionCard()
                 } else {
-                    RadarCollapsedBar(stats, liveCount, accent) { onRadarCollapsed(false) }
+                    sessionCard(); Spacer(Modifier.height(12.dp)); toolCenter()
                 }
-            }
-            if (toolsOnTop) {
-                toolCenter(); Spacer(Modifier.height(12.dp)); sessionCard()
-            } else {
-                sessionCard(); Spacer(Modifier.height(12.dp)); toolCenter()
-            }
             }
             Spacer(Modifier.height(12.dp))
 
-            UploadRunButton(accent, deep, cooking = wiglePhase != SendPhase.IDLE || wdgwPhase != SendPhase.IDLE, onQuickUpload)
-            Spacer(Modifier.height(12.dp))
-            LeaderboardButton(accent, deep, onLeaderboards)
-            Spacer(Modifier.height(12.dp))
-            FieldReportButton(accent, deep, onFieldReport)
-            Spacer(Modifier.height(14.dp))
+            UploadRunButton(accent, cs.primaryContainer, cooking = wiglePhase != SendPhase.IDLE || wdgwPhase != SendPhase.IDLE, onQuickUpload)
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilledTonalButton(onClick = onLeaderboards, modifier = Modifier.weight(1f)) {
+                    Icon(Icons.Filled.EmojiEvents, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Leaderboards", maxLines = 1)
+                }
+                FilledTonalButton(onClick = onFieldReport, modifier = Modifier.weight(1f)) {
+                    Icon(Icons.Filled.BarChart, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Field report", maxLines = 1)
+                }
+            }
+            Spacer(Modifier.height(16.dp))
 
             if (categoryTally.isNotEmpty()) {
-                Row(Modifier.horizontalScroll(rememberScrollState())) {
-                    CategoryChip(Icons.Filled.QueryStats, "${stats.runs}", "runs", accent)
-
-                    categoryTally.filterNot { it.first in setOf("WiFi AP", "WiFi Client", "Cell tower") }
-                        .take(10).forEach { (cat, n) -> CategoryChip(iconFor("", cat), "$n", cat, accent) }
+                Text("Lifetime by category", style = MaterialTheme.typography.titleSmall, color = cs.onSurfaceVariant)
+                Spacer(Modifier.height(4.dp))
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    AssistChip(
+                        onClick = onFieldReport,
+                        label = { Text("${stats.runs} runs") },
+                        leadingIcon = { Icon(Icons.Filled.QueryStats, null, Modifier.size(AssistChipDefaults.IconSize)) }
+                    )
+                    // Grouped by canonical category; tapping opens the filtered Devices list.
+                    categoryTally
+                        .groupBy({ com.rocketgod.warble.domain.model.DeviceCategory.of(it.first) }, { it.second })
+                        .mapValues { it.value.sum() }
+                        .filterKeys { it !in setOf(com.rocketgod.warble.domain.model.DeviceCategory.WIFI_AP,
+                            com.rocketgod.warble.domain.model.DeviceCategory.WIFI_CLIENT, com.rocketgod.warble.domain.model.DeviceCategory.CELL_TOWER) }
+                        .entries.sortedByDescending { it.value }
+                        .take(10).forEach { (cat, n) ->
+                            AssistChip(
+                                onClick = { onCategory(cat) },
+                                label = { Text("${fmtCompact(n.toLong())} ${cat.display}") },
+                                leadingIcon = { Icon(iconFor("", cat.label), null, Modifier.size(AssistChipDefaults.IconSize)) }
+                            )
+                        }
                 }
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(16.dp))
             }
 
+            // ---- live list header -------------------------------------------------------------
             Row(
-                Modifier.fillMaxWidth().clickable { onSeenCollapsed(!seenCollapsed) }.padding(vertical = 2.dp),
+                Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).clickable { onSeenCollapsed(!seenCollapsed) }
+                    .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text("CURRENTLY SEEN (${contacts.size})", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                    Text(if (seenCollapsed) "Tap to expand the live list" else "Live now — drops into the field report after 30s of quiet",
-                        color = Palette.muted, fontFamily = Mono, fontSize = 12.sp)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Currently seen", style = MaterialTheme.typography.titleMedium, color = cs.onSurface)
+                        Spacer(Modifier.width(8.dp))
+                        Badge(containerColor = cs.secondaryContainer, contentColor = cs.onSecondaryContainer) { Text("${contacts.size}") }
+                    }
+                    Text(if (seenCollapsed) "Tap to show the live list" else "Live now. Devices move to history after 30 s of quiet.",
+                        style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                 }
                 Icon(if (seenCollapsed) Icons.Filled.ExpandMore else Icons.Filled.ExpandLess,
-                    if (seenCollapsed) "expand" else "collapse", tint = accent, modifier = Modifier.size(28.dp))
+                    if (seenCollapsed) "Expand" else "Collapse", tint = cs.onSurfaceVariant)
             }
             if (!seenCollapsed) {
-            Spacer(Modifier.height(8.dp))
-
-            run {
-                val now = System.currentTimeMillis()
-                fun live(c: Contact) = now - c.lastSeen < 10_000L
-                val intAp = contacts.count { it.type == SignalType.WIFI && it.category != "WiFi Client" && it.liveByPhone }
-                val extAp = contacts.count { it.type == SignalType.WIFI && it.category != "WiFi Client" && it.liveByMonitor }
-                val extCli = contacts.count { it.type == SignalType.WIFI && it.category == "WiFi Client" && it.liveByMonitor }
-                val bt = contacts.count { it.type == SignalType.BLE && live(it) }
-                val cell = contacts.count { it.type == SignalType.CELL && live(it) }
-                Row(
-                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
-                        .padding(bottom = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TallyPip(Icons.Filled.Wifi, intAp, "AP", accent, bolt = false)
-                    TallyPip(Icons.Filled.Wifi, extAp, "AP", Palette.gold, bolt = true)
-                    TallyPip(Icons.Filled.Wifi, extCli, "client", Palette.gold, bolt = true)
-                    TallyPip(Icons.Filled.Bluetooth, bt, "BT", accent, bolt = false)
-                    TallyPip(Icons.Filled.CellTower, cell, "cell", accent, bolt = false)
+                run {
+                    val now = System.currentTimeMillis()
+                    fun live(c: Contact) = now - c.lastSeen < 10_000L
+                    val intAp = contacts.count { it.type == SignalType.WIFI && it.category != "WiFi Client" && it.liveByPhone }
+                    val extAp = contacts.count { it.type == SignalType.WIFI && it.category != "WiFi Client" && it.liveByMonitor }
+                    val extCli = contacts.count { it.type == SignalType.WIFI && it.category == "WiFi Client" && it.liveByMonitor }
+                    val bt = contacts.count { it.type == SignalType.BLE && live(it) }
+                    val cell = contacts.count { it.type == SignalType.CELL && live(it) }
+                    FlowRow(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        TallyPip(Icons.Filled.Wifi, intAp, "APs", bolt = false)
+                        if (beast is BeastState.Engaged || extAp > 0 || extCli > 0) {
+                            TallyPip(Icons.Filled.Wifi, extAp, "APs", bolt = true)
+                            TallyPip(Icons.Filled.Wifi, extCli, "clients", bolt = true)
+                        }
+                        TallyPip(Icons.Filled.Bluetooth, bt, "Bluetooth", bolt = false)
+                        TallyPip(Icons.Filled.CellTower, cell, "cells", bolt = false)
+                    }
                 }
-            }
-            Row(Modifier.horizontalScroll(rememberScrollState())) {
-                Text("sort", color = Palette.muted, fontFamily = Mono, fontSize = 13.sp, modifier = Modifier.padding(end = 8.dp, top = 8.dp))
-                SortMode.values().forEach { m ->
-                    val sel = m == sortMode
-                    Box(
-                        Modifier.padding(end = 6.dp)
-                            .border(1.dp, if (sel) Color.Transparent else Palette.line, RoundedCornerShape(6.dp))
-                            .background(if (sel) accent else Color.Transparent, RoundedCornerShape(6.dp))
-                            .clickable { onSort(m) }.padding(horizontal = 12.dp, vertical = 7.dp)
-                    ) { Text(m.label, color = if (sel) inkOn(accent) else Palette.muted, fontFamily = Mono, fontSize = 13.sp) }
+                Spacer(Modifier.height(4.dp))
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.AutoMirrored.Filled.Sort, "Sort", tint = cs.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                    SortMode.values().forEach { m ->
+                        FilterChip(selected = m == sortMode, onClick = { onSort(m) }, label = { Text(m.label) })
+                    }
                 }
-            }
-            Spacer(Modifier.height(4.dp))
-            Row(Modifier.horizontalScroll(rememberScrollState())) {
-                Text("filter", color = Palette.muted, fontFamily = Mono, fontSize = 13.sp, modifier = Modifier.padding(end = 8.dp, top = 8.dp))
-                TypeFilter.values().forEach { f ->
-
-                    val sel = f == typeFilter && !excludedOnly
-                    Box(
-                        Modifier.padding(end = 6.dp)
-                            .border(1.dp, if (sel) Color.Transparent else Palette.line, RoundedCornerShape(6.dp))
-                            .background(if (sel) accent else Color.Transparent, RoundedCornerShape(6.dp))
-                            .clickable { onFilter(f); excludedOnly = false }.padding(horizontal = 12.dp, vertical = 7.dp)
-                    ) { Text(f.label, color = if (sel) inkOn(accent) else Palette.muted, fontFamily = Mono, fontSize = 13.sp) }
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.FilterList, "Filter", tint = cs.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                    TypeFilter.values().forEach { f ->
+                        FilterChip(selected = f == typeFilter && !excludedOnly, onClick = { onFilter(f); excludedOnly = false }, label = { Text(f.label) })
+                    }
+                    FilterChip(selected = excludedOnly, onClick = { excludedOnly = !excludedOnly }, label = { Text("Excluded") },
+                        leadingIcon = { Icon(Icons.Filled.Block, null, Modifier.size(FilterChipDefaults.IconSize)) })
                 }
-
-                Box(
-                    Modifier.padding(end = 6.dp)
-                        .border(1.dp, if (excludedOnly) Color.Transparent else Palette.line, RoundedCornerShape(6.dp))
-                        .background(if (excludedOnly) accent else Color.Transparent, RoundedCornerShape(6.dp))
-                        .clickable { excludedOnly = !excludedOnly }.padding(horizontal = 12.dp, vertical = 7.dp)
-                ) { Text("Excluded", color = if (excludedOnly) inkOn(accent) else Palette.muted, fontFamily = Mono, fontSize = 13.sp) }
-            }
-            Spacer(Modifier.height(6.dp))
-            if (liveSorted.isEmpty()) {
-
-                val offByMaxWifi = maxWifi && (typeFilter == TypeFilter.BLE || typeFilter == TypeFilter.CELL)
-                val msg = if (offByMaxWifi)
-                    "Max Wi-Fi mode is on, so ${typeFilter.label} scanning is off. Turn off Max Wi-Fi in Settings to see these."
-                else "Nothing in range right now."
-                Text(msg, color = if (offByMaxWifi) accent else Palette.muted, fontFamily = Mono, fontSize = 13.sp, modifier = Modifier.padding(vertical = 10.dp))
-            }
+                Spacer(Modifier.height(4.dp))
+                if (liveSorted.isEmpty()) {
+                    val offByMaxWifi = maxWifi && (typeFilter == TypeFilter.BLE || typeFilter == TypeFilter.CELL)
+                    val msg = if (offByMaxWifi)
+                        "Max Wi-Fi mode is on, so ${typeFilter.label} scanning is off. Turn off Max Wi-Fi in Settings to see these."
+                    else "Nothing in range right now."
+                    Text(msg, style = MaterialTheme.typography.bodyMedium, color = if (offByMaxWifi) cs.primary else cs.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 12.dp))
+                }
             }
         }
         if (!seenCollapsed) items(liveSorted, key = { "live_" + it.key }) { c ->
-            Row(
-                Modifier.fillMaxWidth().clickable { onSelect(c) }.padding(vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-
-                Icon(iconFor(c.icon, c.category), null, tint = if (c.identified) accent else Palette.muted, modifier = Modifier.width(28.dp))
-                Spacer(Modifier.width(10.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(c.name ?: "— not advertised", color = Palette.ink, fontFamily = Mono, fontSize = 16.sp, maxLines = 1)
-                    Text(c.maker ?: c.category, color = Palette.muted, fontFamily = Mono, fontSize = 12.sp, maxLines = 1)
+            LiveRow(
+                c, tracked = c.key == trackKey, onClick = { onSelect(c) },
+                onLocate = {
+                    trackKey = c.key
+                    onToolOrd(DashTool.LOCATOR.ordinal)
+                    onRadarCollapsed(false)
+                    scope.launch { listState.animateScrollToItem(0) }
                 }
+            )
+        }
+        item { Spacer(Modifier.height(24.dp)) }
+    }
+}
 
+/** Title row: app name, scanning state, external adapter status and settings. */
+@Composable
+private fun ScanHeader(beast: BeastState, fwStatus: String?, contacts: List<Contact>, scanning: Boolean, accent: Color, onSettings: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Wardrive", style = MaterialTheme.typography.headlineSmall, color = cs.onSurface)
+                Text(" Go", style = MaterialTheme.typography.headlineSmall, color = accent)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
+                ScanStateDot(scanning)
+                Spacer(Modifier.width(6.dp))
+                Text(if (scanning) "Scanning" else "Paused", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
+                if (beast is BeastState.Engaged) {
+                    Spacer(Modifier.width(10.dp))
+                    Surface(shape = CircleShape, color = cs.primaryContainer) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)) {
+                            Icon(Icons.Filled.Bolt, null, tint = cs.onPrimaryContainer, modifier = Modifier.size(14.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("BEAST", style = MaterialTheme.typography.labelSmall, color = cs.onPrimaryContainer)
+                        }
+                    }
+                }
+            }
+        }
+        IconButton(onClick = onSettings) { Icon(Icons.Filled.Settings, "Settings", tint = cs.onSurfaceVariant) }
+    }
+    when {
+        beast is BeastState.Engaged && fwStatus != null ->
+            Text(reconcileHeader(fwStatus, contacts), style = MaterialTheme.typography.bodySmall, color = accent,
+                maxLines = 2, modifier = Modifier.padding(top = 4.dp))
+        fwStatus != null ->
+            Text("Adapter disconnected · on-board scanning", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp))
+    }
+}
+
+/** Pulsing dot while scanning; static outline when paused. */
+@Composable
+private fun ScanStateDot(scanning: Boolean) {
+    val cs = MaterialTheme.colorScheme
+    val good = com.rocketgod.warble.ui.theme.LocalStatusColors.current.good
+    if (!scanning || UiFlags.reduceMotion) {
+        Box(Modifier.size(8.dp).background(if (scanning) good else Color.Transparent, CircleShape).border(1.dp, if (scanning) good else cs.outline, CircleShape))
+        return
+    }
+    val tr = rememberInfiniteTransition(label = "scanDot")
+    val a by tr.animateFloat(0.35f, 1f, infiniteRepeatable(tween(900), androidx.compose.animation.core.RepeatMode.Reverse), label = "a")
+    Box(Modifier.size(8.dp).graphicsLayer { alpha = a }.background(good, CircleShape))
+}
+
+/**
+ * One of the "new" counters. Tapping opens the list of those finds. [pop] gives the Wi-Fi
+ * tile the score-pop animation when it ticks up.
+ */
+@Composable
+private fun NewFindTile(label: String, icon: ImageVector, value: Long, tint: Color, modifier: Modifier, pop: Boolean = false, onClick: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val scale = remember { Animatable(1f) }
+    var prev by remember { mutableStateOf(value) }
+    LaunchedEffect(value) {
+        if (pop && value > prev && !UiFlags.reduceMotion) {
+            scale.animateTo(1.35f, spring(dampingRatio = 0.3f, stiffness = 2400f))
+            scale.animateTo(1f, spring(dampingRatio = 0.42f, stiffness = 120f))
+        }
+        prev = value
+    }
+    Surface(onClick = onClick, modifier = modifier, shape = MaterialTheme.shapes.medium, color = cs.surfaceContainer) {
+        Column(Modifier.padding(horizontal = 10.dp, vertical = 12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(28.dp).background(tint.copy(alpha = 0.18f), CircleShape), contentAlignment = Alignment.Center) {
+                    Icon(icon, null, tint = tint, modifier = Modifier.size(16.dp))
+                }
+                Spacer(Modifier.weight(1f))
+                Icon(Icons.Filled.ChevronRight, "Show list", tint = cs.onSurfaceVariant, modifier = Modifier.size(18.dp))
+            }
+            Spacer(Modifier.height(8.dp))
+            Box(Modifier.graphicsLayer { scaleX = scale.value; scaleY = scale.value; transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f) }) {
+                RollingNumber(value, cs.onSurface, 24.sp, compact = true)
+            }
+            Text(label, style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        }
+    }
+}
+
+/** A device in the live list. */
+@Composable
+private fun LiveRow(c: Contact, tracked: Boolean, onClick: () -> Unit, onLocate: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val category = com.rocketgod.warble.domain.model.DeviceCategory.of(c.category)
+    val threat = com.rocketgod.warble.classify.NotableDevices.threat(c.name, c.key, c.companyId, c.category)
+    androidx.compose.material3.ListItem(
+        modifier = Modifier.clip(MaterialTheme.shapes.medium).clickable(onClick = onClick),
+        colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = Color.Transparent),
+        leadingContent = { com.rocketgod.warble.ui.components.CategoryAvatar(category, highlight = threat != null) },
+        headlineContent = {
+            Text(threat?.label?.takeIf { c.name == null } ?: c.name ?: "Not advertised",
+                color = if (c.name == null && threat == null) cs.onSurfaceVariant else cs.onSurface,
+                maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        },
+        supportingContent = {
+            Text(listOfNotNull(c.model ?: c.maker, category.label.takeIf { c.maker != null || c.model != null } ?: c.category,
+                if (c.profileId != c.key) "linked" else null).joinToString(" · "),
+                maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        },
+        trailingContent = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 if (c.seenByMonitor && !c.seenByPhone) {
-                    Icon(Icons.Filled.Bolt, "monitor", tint = Palette.gold, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Filled.Bolt, "Seen by external adapter", tint = cs.tertiary, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
                 }
-                Text("${c.rssi}dBm", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Spacer(Modifier.width(10.dp))
-
-                Icon(Icons.Filled.GpsFixed, "locate device",
-                    tint = if (c.key == trackKey) accent else Palette.muted,
-                    modifier = Modifier.size(22.dp).clickable {
-                        trackKey = c.key
-                        onToolOrd(DashTool.LOCATOR.ordinal)
-                        onRadarCollapsed(false)
-                        scope.launch { listState.animateScrollToItem(0) }
-                    })
+                Column(horizontalAlignment = Alignment.End) {
+                    SignalBars(c.strength)
+                    Text("${c.rssi} dBm", style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
+                }
+                IconButton(onClick = onLocate) {
+                    Icon(Icons.Filled.GpsFixed, "Locate device", tint = if (tracked) cs.primary else cs.onSurfaceVariant)
+                }
             }
-            Box(Modifier.fillMaxWidth().height(1.dp).background(Palette.line.copy(alpha = 0.35f)))
         }
-        item { Spacer(Modifier.height(30.dp)) }
+    )
+}
+
+/** Four-bar signal indicator from Contact.strength (0..1). */
+@Composable
+private fun SignalBars(strength: Float) {
+    val cs = MaterialTheme.colorScheme
+    val lit = (strength * 4f).toInt().coerceIn(1, 4)
+    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.height(12.dp)) {
+        for (i in 1..4) Box(Modifier.width(3.dp).height((3 * i).dp).background(if (i <= lit) cs.primary else cs.outlineVariant, RoundedCornerShape(1.dp)))
     }
 }
 
 @Composable
-private fun VDivider() { Box(Modifier.width(1.dp).height(52.dp).background(Palette.line)) }
-
-@Composable
-private fun TallyPip(icon: ImageVector, value: Int, label: String, tint: Color, bolt: Boolean) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 12.dp)) {
-        if (bolt) Icon(Icons.Filled.Bolt, null, tint = Palette.gold, modifier = Modifier.size(13.dp))
-        Icon(icon, null, tint = tint, modifier = Modifier.size(15.dp))
-        Spacer(Modifier.width(3.dp))
-        Text("$value", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-        Spacer(Modifier.width(3.dp))
-        Text(label, color = Palette.muted, fontFamily = Mono, fontSize = 11.sp)
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun SignalTally(icon: ImageVector, label: String, n: Long, accent: Color, selected: Boolean, modifier: Modifier, onPick: () -> Unit) {
-    Column(
-        modifier
-            .combinedClickable(onClick = onPick, onLongClick = onPick)
-            .background(if (selected) accent.copy(alpha = 0.16f) else Color.Transparent, RoundedCornerShape(10.dp))
-            .border(1.dp, if (selected) accent else Color.Transparent, RoundedCornerShape(10.dp))
-            .padding(vertical = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Icon(icon, null, tint = accent, modifier = Modifier.size(20.dp))
-        Spacer(Modifier.height(4.dp))
-        Text(fmtGrouped(n), color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-        Text(label, color = if (selected) accent else Palette.muted, fontFamily = Mono, fontSize = 11.sp)
-    }
-}
-
-@Composable
-private fun CategoryChip(icon: ImageVector, value: String, label: String, accent: Color) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(end = 8.dp).border(1.dp, Palette.line, RoundedCornerShape(10.dp))
-            .background(Palette.surface, RoundedCornerShape(10.dp)).padding(horizontal = 10.dp, vertical = 8.dp)
-    ) {
-        Icon(icon, null, tint = accent, modifier = Modifier.size(16.dp))
-        Spacer(Modifier.width(6.dp))
-        Text(value, color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-        Spacer(Modifier.width(5.dp))
-        Text(label, color = Palette.muted, fontFamily = Mono, fontSize = 12.sp)
-    }
-}
-
-@Composable
-private fun LeaderboardButton(accent: Color, deep: Color, onClick: () -> Unit) {
-    val (mod, scale) = pressable(onClick)
-    val tint = trophyTint(accent)
-    Box(mod.scale(scale).fillMaxWidth().glassAction(accent)) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 15.dp),
-            horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically
-        ) {
-            ShinyTrophy(tint, 18.dp, 0)
-            Spacer(Modifier.width(14.dp))
-            Text("VIEW LEADERBOARDS", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            Spacer(Modifier.width(14.dp))
-            ShinyTrophy(tint, 18.dp, 600)
-        }
-        SheenSweep(12.dp)
-    }
-}
-
-@Composable
-private fun ToolSwitchButton(accent: Color, modifier: Modifier, onClick: () -> Unit) {
-    val hint = remember { Animatable(0f) }
-    LaunchedEffect(Unit) {
-        if (UiFlags.reduceMotion) return@LaunchedEffect
-        kotlinx.coroutines.delay(450)
-        repeat(3) {
-            hint.animateTo(1f, tween(430, easing = FastOutSlowInEasing))
-            hint.animateTo(0f, tween(430, easing = FastOutSlowInEasing))
+private fun TallyPip(icon: ImageVector, value: Int, label: String, bolt: Boolean) {
+    val cs = MaterialTheme.colorScheme
+    Surface(shape = CircleShape, color = cs.surfaceContainerHigh) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)) {
+            if (bolt) Icon(Icons.Filled.Bolt, "External adapter", tint = cs.tertiary, modifier = Modifier.size(13.dp))
+            Icon(icon, null, tint = if (bolt) cs.tertiary else cs.primary, modifier = Modifier.size(15.dp))
+            Spacer(Modifier.width(5.dp))
+            Text("$value", style = MaterialTheme.typography.labelLarge, color = cs.onSurface)
+            Spacer(Modifier.width(4.dp))
+            Text(label, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
         }
     }
-    val p = hint.value
-    Box(
-        modifier.size(30.dp).scale(1f + 0.12f * p)
-            .shadow((7f * p).dp, RoundedCornerShape(8.dp), spotColor = accent, ambientColor = accent)
-
-            .clip(RoundedCornerShape(8.dp))
-            .background(Palette.surface, RoundedCornerShape(8.dp))
-            .border((1f + 1.6f * p).dp, lerp(Palette.line, accent, p), RoundedCornerShape(8.dp))
-            .clickable { onClick() },
-        contentAlignment = Alignment.Center
-    ) { Icon(Icons.Filled.Apps, "switch tool", tint = accent, modifier = Modifier.size(18.dp)) }
 }
 
 @Composable
 private fun RadarCollapsedBar(stats: Stats, liveCount: Int, accent: Color, onExpand: () -> Unit) {
-    Column(
-        Modifier.fillMaxWidth()
-            .border(1.dp, accent.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
-            .background(Palette.surface, RoundedCornerShape(12.dp)).padding(14.dp)
-    ) {
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Filled.Apps, null, tint = accent, modifier = Modifier.size(20.dp))
-            Spacer(Modifier.width(10.dp))
+    val cs = MaterialTheme.colorScheme
+    Card(colors = CardDefaults.cardColors(containerColor = cs.surfaceContainerLow), modifier = Modifier.fillMaxWidth()) {
+        Row(Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Filled.Radar, null, tint = cs.onSurfaceVariant, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text("Tools hidden", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                Text("Still scanning — tap + to show", color = Palette.muted, fontFamily = Mono, fontSize = 12.sp)
+                Text("Tools hidden", style = MaterialTheme.typography.titleSmall, color = cs.onSurface)
+                Text("Still scanning · $liveCount in range", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
             }
-            Box(
-                Modifier.size(34.dp).background(accent, RoundedCornerShape(9.dp)).clickable { onExpand() },
-                contentAlignment = Alignment.Center
-            ) { Icon(Icons.Filled.Add, "show tools", tint = inkOn(accent), modifier = Modifier.size(20.dp)) }
+            FilledTonalIconButton(onClick = onExpand) { Icon(Icons.Filled.UnfoldMore, "Show tools") }
         }
     }
 }
@@ -978,7 +998,7 @@ private fun DeviceLocator(target: Contact?, chosen: Boolean, accent: Color, onCh
     if (shown == null) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(if (chosen) "Searching…" else "Nothing in range to locate", color = Palette.muted, fontFamily = Mono, fontSize = 13.sp)
+                Text(if (chosen) "Searching…" else "Nothing in range to locate", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(12.dp))
                 ChooseDeviceChip(accent, onChooseDevice)
             }
@@ -1024,7 +1044,12 @@ private fun DeviceLocator(target: Contact?, chosen: Boolean, accent: Color, onCh
         }
     }
 
-    Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+    // Centered when it fits; scrolls instead of clipping on short screens.
+    Column(
+        Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).heightIn(min = maxHeight),
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center
+    ) {
         Box(contentAlignment = Alignment.Center) {
             Canvas(Modifier.size(150.dp)) {
                 val sw = 15.dp.toPx()
@@ -1032,44 +1057,35 @@ private fun DeviceLocator(target: Contact?, chosen: Boolean, accent: Color, onCh
                 drawArc(gaugeColor, -90f, 360f * frac, false, style = Stroke(sw, cap = StrokeCap.Round))
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("$rssi dB", color = gaugeColor, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 30.sp, maxLines = 1)
-                Text(trendLabel, color = if (live) Palette.muted else Color(0xFFFF5B52), fontFamily = Mono, fontSize = 12.sp)
+                Text("$rssi dB", color = gaugeColor, fontFamily = AppFont, fontWeight = FontWeight.Bold, fontSize = 30.sp, maxLines = 1)
+                Text(trendLabel, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = if (live) Palette.muted else Color(0xFFFF5B52))
             }
         }
         Spacer(Modifier.height(12.dp))
-        Text(if (live) distLabel else "Out of range", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 20.sp, maxLines = 1)
-        Text(if (live) "Approximate distance · $distSub" else "last known signal", color = Palette.muted, fontFamily = Mono, fontSize = 11.sp)
+        Text(if (live) distLabel else "Out of range", style = androidx.compose.material3.MaterialTheme.typography.titleLarge, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface, maxLines = 1)
+        Text(if (live) "Approximate distance · $distSub" else "last known signal", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(8.dp))
-        Text(shown.name ?: "Unknown device", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
-        Text(shown.maker ?: shown.category, color = Palette.muted, fontFamily = Mono, fontSize = 11.sp, maxLines = 1)
+        Text(shown.name ?: "Unknown device", style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface, maxLines = 1)
+        Text(shown.maker ?: shown.category, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
         Spacer(Modifier.height(12.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.border(1.dp, Palette.line, RoundedCornerShape(8.dp))
-                    .clickable { vibrate = !vibrate }.padding(horizontal = 12.dp, vertical = 7.dp)
-            ) {
-                Icon(Icons.Filled.Vibration, null, tint = if (vibrate) accent else Palette.muted, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(6.dp))
-                Text(if (vibrate) "Vibrating" else "Silent", color = if (vibrate) accent else Palette.muted, fontFamily = Mono, fontSize = 12.sp)
-            }
-            Spacer(Modifier.width(10.dp))
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(
+                selected = vibrate, onClick = { vibrate = !vibrate },
+                label = { Text(if (vibrate) "Vibrating" else "Silent") },
+                leadingIcon = { Icon(Icons.Filled.Vibration, null, Modifier.size(FilterChipDefaults.IconSize)) }
+            )
             ChooseDeviceChip(accent, onChooseDevice)
         }
+    }
     }
 }
 
 @Composable
 private fun ChooseDeviceChip(accent: Color, onChoose: () -> Unit) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.border(1.dp, Palette.line, RoundedCornerShape(8.dp))
-            .clickable { onChoose() }.padding(horizontal = 12.dp, vertical = 7.dp)
-    ) {
-        Icon(Icons.Filled.GpsFixed, null, tint = accent, modifier = Modifier.size(16.dp))
-        Spacer(Modifier.width(6.dp))
-        Text("Choose device", color = accent, fontFamily = Mono, fontSize = 12.sp)
-    }
+    AssistChip(
+        onClick = onChoose, label = { Text("Choose device") },
+        leadingIcon = { Icon(Icons.Filled.GpsFixed, null, Modifier.size(AssistChipDefaults.IconSize)) }
+    )
 }
 
 @Composable
@@ -1080,8 +1096,8 @@ private fun DeviceReadout(beast: BeastState, fwStatus: String?, contacts: List<C
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(Icons.Filled.Bolt, null, tint = Palette.muted, modifier = Modifier.size(40.dp))
                 Spacer(Modifier.height(10.dp))
-                Text("No external device", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Text("Plug in a supported adapter over USB-OTG", color = Palette.muted, fontFamily = Mono, fontSize = 11.sp)
+                Text("No external device", style = androidx.compose.material3.MaterialTheme.typography.titleMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
+                Text("Plug in a supported adapter over USB-OTG", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         return
@@ -1123,11 +1139,11 @@ private fun DeviceReadout(beast: BeastState, fwStatus: String?, contacts: List<C
         Spacer(Modifier.height(16.dp))
         Icon(Icons.Filled.Bolt, null, tint = accent, modifier = Modifier.size(46.dp))
         Spacer(Modifier.height(12.dp))
-        Text(title, color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 22.sp,
+        Text(title, style = androidx.compose.material3.MaterialTheme.typography.headlineSmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
             maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.height(5.dp))
-        Text("${a.chipsetName}  ·  ${a.idHex}", color = accent, fontFamily = Mono, fontSize = 12.sp,
+        Text("${a.chipsetName}  ·  ${a.idHex}", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = accent,
             maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.height(30.dp))
@@ -1144,7 +1160,7 @@ private fun DeviceReadout(beast: BeastState, fwStatus: String?, contacts: List<C
             }
         }
         Spacer(Modifier.height(14.dp))
-        Text("live from this device · last 12 s", color = Palette.muted, fontFamily = Mono, fontSize = 11.sp)
+        Text("live from this device · last 12 s", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
 
         val isMonitorNic = a.vid == 0x0cf3 || a.vid == 0x0e8d || (a.vid == 0x0bda && a.pid == 0x0811) || a.vid == 0x148f
         if (isMonitorNic) {
@@ -1153,7 +1169,7 @@ private fun DeviceReadout(beast: BeastState, fwStatus: String?, contacts: List<C
             var lock by remember(a.idHex) { mutableStateOf(com.rocketgod.warble.usb.UsbBeast.lockChannel) }
             var dwell by remember(a.idHex) { mutableStateOf(com.rocketgod.warble.usb.UsbBeast.dwellMs) }
             Spacer(Modifier.height(18.dp))
-            Text("CHANNEL", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+            Text("CHANNEL", style = androidx.compose.material3.MaterialTheme.typography.labelMedium, color = accent)
             Spacer(Modifier.height(5.dp))
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
                 ControlChip("Hop", lock == null, accent) { lock = null; com.rocketgod.warble.usb.UsbBeast.setLock(null) }
@@ -1164,9 +1180,9 @@ private fun DeviceReadout(beast: BeastState, fwStatus: String?, contacts: List<C
             }
             Spacer(Modifier.height(5.dp))
             Text(if (lock == null) "hopping all channels" else "locked to channel $lock · deep dwell on one target",
-                color = Palette.muted, fontFamily = Mono, fontSize = 10.sp)
+                style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(14.dp))
-            Text("DWELL PER CHANNEL", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+            Text("DWELL PER CHANNEL", style = androidx.compose.material3.MaterialTheme.typography.labelMedium, color = accent)
             Spacer(Modifier.height(5.dp))
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
 
@@ -1183,12 +1199,12 @@ private fun DeviceReadout(beast: BeastState, fwStatus: String?, contacts: List<C
             }
             Spacer(Modifier.height(4.dp))
             Text("The first option is this adapter's tuned default; longer dwell catches more clients/handshakes per channel but revisits slower. One beacon interval is ~102ms — below that you miss beacons. The phone handles fast discovery; this adapter does DEEP capture.",
-                color = Palette.muted, fontFamily = Mono, fontSize = 10.sp)
+                style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
 
             val seenS = ((com.rocketgod.warble.usb.UsbBeast.seenWindowMs + 3000L) / 1000L).coerceAtLeast(1L)
             Spacer(Modifier.height(3.dp))
             Text("At this setting a passed AP stays counted for ~${seenS}s (≈ one sweep). Camp-busy or a channel-lock shortens it.",
-                color = accent.copy(alpha = 0.85f), fontFamily = Mono, fontSize = 10.sp)
+                style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = accent.copy(alpha = 0.85f))
         }
 
         if (serialEsp) {
@@ -1205,9 +1221,9 @@ private fun DeviceReadout(beast: BeastState, fwStatus: String?, contacts: List<C
                 Icon(Icons.Filled.Bolt, null, tint = if (fx) accent else Palette.muted, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(if (fx) "Board FX · ON" else "Board FX · off", color = if (fx) accent else Palette.muted,
-                    fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    fontFamily = AppFont, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
-            Text("LEDs + LCD accent match your skin", color = Palette.muted, fontFamily = Mono, fontSize = 10.sp,
+            Text("LEDs + LCD accent match your skin", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp))
         }
         Spacer(Modifier.height(14.dp))
@@ -1241,35 +1257,25 @@ private fun deviceName(fw: String?): String? {
 
 @Composable
 private fun BandChip(label: String, count: Int, accent: Color) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.border(1.dp, Palette.line, RoundedCornerShape(9.dp)).padding(horizontal = 14.dp, vertical = 8.dp)
-    ) {
-        Text("$count", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-        Spacer(Modifier.width(7.dp))
-        Text(label, color = Palette.muted, fontFamily = Mono, fontSize = 12.sp)
+    Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
+            Text("$count", style = MaterialTheme.typography.titleLarge, color = accent)
+            Spacer(Modifier.width(7.dp))
+            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 
 @Composable
 private fun ControlChip(label: String, selected: Boolean, accent: Color, onClick: () -> Unit) {
-    Box(
-        Modifier.clip(RoundedCornerShape(8.dp))
-            .background(if (selected) accent else Palette.surface)
-            .border(1.dp, if (selected) accent else Palette.line, RoundedCornerShape(8.dp))
-            .clickable { onClick() }
-            .padding(horizontal = 12.dp, vertical = 7.dp)
-    ) {
-        Text(label, color = if (selected) inkOn(accent) else Palette.ink, fontFamily = Mono,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal, fontSize = 12.sp)
-    }
+    FilterChip(selected = selected, onClick = onClick, label = { Text(label) })
 }
 
 @Composable
 private fun ReadoutStat(value: Int, label: String, accent: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("$value", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 40.sp)
-        Text(label, color = Palette.muted, fontFamily = Mono, fontSize = 13.sp)
+        Text("$value", style = MaterialTheme.typography.displaySmall, color = accent)
+        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -1278,19 +1284,13 @@ private fun UploadRunButton(accent: Color, deep: Color, cooking: Boolean, onClic
 
     if (cooking) { CookingButton(); return }
 
-    val (mod, scale) = pressable(onClick)
-    Box(mod.scale(scale).fillMaxWidth().glassAction(accent)) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 15.dp),
-            horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(Icons.Filled.CloudUpload, null, tint = accent, modifier = Modifier.size(20.dp))
-            Spacer(Modifier.width(14.dp))
-            Text("UPLOAD THIS RUN", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            Spacer(Modifier.width(14.dp))
-            Icon(Icons.Filled.CloudUpload, null, tint = accent, modifier = Modifier.size(20.dp))
-        }
-        SheenSweep(12.dp)
+    androidx.compose.material3.Button(
+        onClick = onClick, modifier = Modifier.fillMaxWidth().height(52.dp),
+        shape = MaterialTheme.shapes.large
+    ) {
+        Icon(Icons.Filled.CloudUpload, null, Modifier.size(20.dp))
+        Spacer(Modifier.width(10.dp))
+        Text("Upload this run", style = MaterialTheme.typography.titleSmall)
     }
 }
 
@@ -1362,66 +1362,11 @@ private fun CookingButton() {
             Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
             horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("COOKING", color = Color.White, fontFamily = Mono, fontWeight = FontWeight.Bold,
+            Text("COOKING", color = Color.White, fontFamily = AppFont, fontWeight = FontWeight.Bold,
                 fontSize = 18.sp, letterSpacing = 4.sp)
         }
         SheenSweep(9.dp)
         Box(Modifier.matchParentSize().border(1.dp, Color.White.copy(alpha = 0.35f * glow), RoundedCornerShape(9.dp)))
-    }
-}
-
-@Composable
-private fun FieldReportButton(accent: Color, deep: Color, onClick: () -> Unit) {
-
-    val (mod, scale) = pressable(onClick)
-    Box(mod.scale(scale).fillMaxWidth().glassAction(accent)) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 15.dp),
-            horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically
-        ) {
-            TwinkleIcon(Icons.Filled.BarChart, accent, 18.dp, 0)
-            Spacer(Modifier.width(14.dp))
-            Text("VIEW FIELD REPORT", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            Spacer(Modifier.width(14.dp))
-            TwinkleIcon(Icons.Filled.BarChart, accent, 18.dp, 600)
-        }
-        SheenSweep(12.dp)
-    }
-}
-
-@Composable
-private fun TwinkleIcon(icon: ImageVector, tint: Color, sizeDp: androidx.compose.ui.unit.Dp, staggerMs: Int) {
-    val tr = rememberInfiniteTransition(label = "twinkleIcon")
-    val tw by tr.animateFloat(
-        0.45f, 1f,
-        infiniteRepeatable(tween(900), androidx.compose.animation.core.RepeatMode.Reverse,
-            initialStartOffset = androidx.compose.animation.core.StartOffset(staggerMs)),
-        label = "twIcon"
-    )
-    Icon(icon, null, tint = tint.copy(alpha = tw), modifier = Modifier.size(sizeDp))
-}
-
-@Composable
-private fun ShinyTrophy(tint: Color, sizeDp: androidx.compose.ui.unit.Dp, staggerMs: Int) {
-    val metal = Brush.linearGradient(
-        listOf(tint.copy(alpha = 0.7f), tint, Color.White.copy(alpha = 0.95f), tint, tint.copy(alpha = 0.65f))
-    )
-    val tr = rememberInfiniteTransition(label = "twinkle")
-    val tw by tr.animateFloat(
-        0.25f, 1f,
-        infiniteRepeatable(tween(900), androidx.compose.animation.core.RepeatMode.Reverse,
-            initialStartOffset = androidx.compose.animation.core.StartOffset(staggerMs)),
-        label = "tw"
-    )
-    Box(contentAlignment = Alignment.TopEnd) {
-        Icon(Icons.Filled.EmojiEvents, null, tint = Palette.paper.copy(alpha = 0.6f),
-            modifier = Modifier.size(sizeDp).offset(y = 1.dp))
-        Icon(Icons.Filled.EmojiEvents, null, tint = Color.Unspecified, modifier = Modifier.size(sizeDp)
-            .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
-            .drawWithContent { drawContent(); drawRect(metal, blendMode = androidx.compose.ui.graphics.BlendMode.SrcAtop) })
-        Icon(Icons.Filled.AutoAwesome, null, tint = Color.White,
-            modifier = Modifier.size(sizeDp * 0.5f).offset(x = sizeDp * 0.18f, y = -(sizeDp * 0.12f))
-                .graphicsLayer { alpha = tw; scaleX = tw; scaleY = tw })
     }
 }
 
@@ -1449,13 +1394,6 @@ private fun BoxScope.SheenSweep(corner: androidx.compose.ui.unit.Dp) {
     }
 }
 
-private fun trophyTint(accent: Color): Color {
-    val max = maxOf(accent.red, accent.green, accent.blue)
-    val min = minOf(accent.red, accent.green, accent.blue)
-    val sat = if (max == 0f) 0f else (max - min) / max
-    return if (max > 0.85f && sat < 0.25f) Palette.paper else Palette.gold
-}
-
 private fun unique(stats: Stats, type: SignalType): Long =
     stats.perType.firstOrNull { it.type == type }?.unique ?: 0
 
@@ -1468,35 +1406,31 @@ private fun hue(accent: Color, index: Int): Color = when (index) {
     else -> androidx.compose.ui.graphics.lerp(accent, Color.Black, 0.34f)
 }
 
+/** GNSS summary row; opens the satellite list. */
 @Composable
 private fun SatelliteContent(gnss: com.rocketgod.warble.core.GnssStat, accent: Color, onSatellites: () -> Unit) {
-    Column(Modifier.fillMaxWidth().clickable { onSatellites() }.padding(horizontal = 6.dp)) {
+    val cs = MaterialTheme.colorScheme
+    Column(Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).clickable { onSatellites() }.padding(horizontal = 4.dp, vertical = 6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Filled.SatelliteAlt, null, tint = accent, modifier = Modifier.size(18.dp))
+            Icon(Icons.Filled.SatelliteAlt, null, tint = if (gnss.usedInFix > 0) accent else cs.onSurfaceVariant, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text("SATELLITES", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.weight(1f))
+            Text("Satellites", style = MaterialTheme.typography.titleSmall, color = cs.onSurface, modifier = Modifier.weight(1f))
             Text(
-                if (gnss.total > 0) "${gnss.usedInFix} in fix · ${gnss.total} seen" else "waiting for GPS fix…",
-                color = Palette.muted, fontFamily = Mono, fontSize = 11.sp
+                if (gnss.total > 0) "${gnss.usedInFix} in fix · ${gnss.total} seen" else "Waiting for GPS fix…",
+                style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant
             )
-            Spacer(Modifier.width(6.dp))
-            Icon(Icons.Filled.ChevronRight, null, tint = Palette.muted, modifier = Modifier.size(16.dp))
+            Icon(Icons.Filled.ChevronRight, null, tint = cs.onSurfaceVariant, modifier = Modifier.size(18.dp))
         }
         if (gnss.constellations.isNotEmpty()) {
-            Spacer(Modifier.height(12.dp))
-            Row(Modifier.horizontalScroll(rememberScrollState())) {
-                gnss.constellations.forEachIndexed { i, (name, n) ->
-                    val tint = hue(accent, i % 3)
-                    Row(
-                        Modifier.padding(end = 8.dp)
-                            .background(tint.copy(alpha = 0.16f), RoundedCornerShape(9.dp))
-                            .border(1.dp, tint.copy(alpha = 0.5f), RoundedCornerShape(9.dp))
-                            .padding(horizontal = 11.dp, vertical = 7.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("$n", color = tint, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                        Spacer(Modifier.width(6.dp))
-                        Text(name, color = Palette.ink, fontFamily = Mono, fontSize = 12.sp)
+            Spacer(Modifier.height(8.dp))
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                gnss.constellations.forEach { (name, n) ->
+                    Surface(shape = CircleShape, color = cs.surfaceContainerHigh) {
+                        Row(Modifier.padding(horizontal = 10.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("$n", style = MaterialTheme.typography.labelLarge, color = cs.onSurface)
+                            Spacer(Modifier.width(5.dp))
+                            Text(name, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
+                        }
                     }
                 }
             }
