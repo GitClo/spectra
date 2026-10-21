@@ -383,7 +383,8 @@ class CarMapRenderer(
     }
 
     private fun tile(layer: String, z: Int, x: Int, y: Int): Bitmap? {
-        val key = "$layer/$z/$x/$y"
+        // Cache keys include the CARTO key tag so tiles from a previous key are never reused.
+        val key = "${com.rocketgod.warble.ui.CartoTiles.cacheTag}/$layer/$z/$x/$y"
         tileCache.get(key)?.let { return it }
         if (inflight.add(key)) {
             io.execute {
@@ -404,7 +405,7 @@ class CarMapRenderer(
         var k = 1
         while (k <= 4 && z - k >= MIN_Z) {
             val pz = z - k; val px = x shr k; val py = y shr k
-            val parent = tileCache.get("$layer/$pz/$px/$py")
+            val parent = tileCache.get("${com.rocketgod.warble.ui.CartoTiles.cacheTag}/$layer/$pz/$px/$py")
             if (parent != null) {
                 val div = 1 shl k
                 val subW = parent.width / div; val subH = parent.height / div
@@ -418,7 +419,7 @@ class CarMapRenderer(
     }
 
     private fun diskFile(layer: String, z: Int, x: Int, y: Int) =
-        java.io.File(diskDir, "${layer.replace('/', '_')}_${z}_${x}_$y.png")
+        java.io.File(diskDir, "${com.rocketgod.warble.ui.CartoTiles.cacheTag}${layer.replace('/', '_')}_${z}_${x}_$y.png")
     private fun readDisk(layer: String, z: Int, x: Int, y: Int): Bitmap? {
         val f = diskFile(layer, z, x, y)
         if (!f.exists()) return null
@@ -451,7 +452,7 @@ class CarMapRenderer(
     private fun fetch(layer: String, z: Int, x: Int, y: Int): Bitmap? {
         val sub = "abcd"[((x + y) % 4 + 4) % 4]
 
-        val url = "https://$sub.basemaps.cartocdn.com/$layer/$z/$x/$y@2x.png"
+        val url = com.rocketgod.warble.ui.CartoTiles.withKey("https://$sub.basemaps.cartocdn.com/$layer/$z/$x/$y@2x.png")
         return runCatching {
             val c = (URL(url).openConnection() as HttpURLConnection).apply {
                 connectTimeout = 8000; readTimeout = 8000

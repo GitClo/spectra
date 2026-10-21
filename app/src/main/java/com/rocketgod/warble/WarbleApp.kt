@@ -12,6 +12,7 @@ class WarbleApp : Application() {
         runCatching {
             org.osmdroid.config.Configuration.getInstance().userAgentValue = packageName
         }
+        com.rocketgod.warble.ui.CartoTiles.load(this)
         val prev = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, err ->
             try {
