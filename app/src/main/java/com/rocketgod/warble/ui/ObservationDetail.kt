@@ -43,19 +43,12 @@ fun ObservationDetail(
     canBlock: Boolean = false, blocked: Boolean = false, onBlockToggle: () -> Unit = {},
     onBack: () -> Unit
 ) {
-    Column(
-        Modifier.fillMaxSize().background(Palette.paper).verticalScroll(rememberScrollState()).padding(16.dp)
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Filled.ArrowBack, "back", tint = Palette.ink, modifier = Modifier.clickable { onBack() })
-            Spacer(Modifier.width(12.dp))
-            Icon(iconFor(o.icon, o.category), null, tint = accent, modifier = Modifier.size(26.dp))
-            Spacer(Modifier.width(10.dp))
-            Text(com.rocketgod.warble.classify.NotableDevices.displayName(o.name, o.key, o.companyId, o.category, o.maker) ?: "— not advertised",
-                color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 19.sp)
-        }
+    val title = com.rocketgod.warble.classify.NotableDevices.displayName(o.name, o.key, o.companyId, o.category, o.maker) ?: "Not advertised"
+    com.rocketgod.warble.ui.components.ScrollScreen(title = title, subtitle = "Raw record", onBack = onBack) {
         Spacer(Modifier.height(8.dp))
-        Row {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            com.rocketgod.warble.ui.components.CategoryAvatar(com.rocketgod.warble.domain.model.DeviceCategory.of(o.category))
+            Spacer(Modifier.width(12.dp))
             Badge(signalLabel(o.type), accent)
             if (o.inWigle) { Spacer(Modifier.width(8.dp)); Badge("in WiGLE", Palette.ochre) }
             if (blocked) { Spacer(Modifier.width(8.dp)); Badge("excluded", Palette.muted) }
@@ -63,17 +56,8 @@ fun ObservationDetail(
 
         if (canBlock) {
             Spacer(Modifier.height(14.dp))
-            Row(
-                Modifier.fillMaxWidth().glassAction(if (blocked) Palette.muted else accent)
-                    .clickable { onBlockToggle() }.padding(vertical = 13.dp),
-                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Filled.Shield, null, tint = if (blocked) Palette.muted else accent, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(if (blocked) "EXCLUDED FROM UPLOADS ✓" else "EXCLUDE FROM UPLOADS",
-                    color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            }
+            com.rocketgod.warble.ui.components.KitAction(
+                if (blocked) "Excluded from uploads ✓" else "Exclude from uploads", Icons.Filled.Shield, onBlockToggle)
         }
 
         Section("IDENTITY", accent)
@@ -127,66 +111,34 @@ fun ObservationDetail(
             o.altitude?.let { Field("Altitude", String.format(Locale.US, "%.1f m", it)) }
             o.accuracy?.let { Field("Accuracy", String.format(Locale.US, "±%.0f m", it)) }
             Spacer(Modifier.height(12.dp))
-            Row(
-                Modifier.fillMaxWidth().glassAction(accent)
-                    .clickable { onMap(o) }.padding(vertical = 14.dp),
-                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Filled.Map, null, tint = accent, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("Show on map", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            }
+            com.rocketgod.warble.ui.components.KitAction("Show on map", Icons.Filled.Map, { onMap(o) }, primary = true)
         } else {
             Spacer(Modifier.height(18.dp))
-            Text("No location — a GPS fix wasn't available when this was logged.",
-                color = Palette.muted, fontFamily = Mono, fontSize = 12.sp)
+            Text("No location: a GPS fix wasn't available when this was logged.",
+                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (o.viaMonitor) {
             Spacer(Modifier.height(20.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.SettingsInputAntenna, null, tint = accent, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Captured via external monitor adapter", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Text("Captured via external monitor adapter", color = accent, fontFamily = AppFont, fontWeight = FontWeight.Bold, fontSize = 13.sp)
             }
             Spacer(Modifier.height(10.dp))
-            Row(
-                Modifier.fillMaxWidth().border(1.dp, accent.copy(alpha = 0.6f), androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
-                    .clickable { onExportPcap(o) }.padding(vertical = 13.dp),
-                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Filled.Download, null, tint = accent, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("Export PCAP", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            }
+            com.rocketgod.warble.ui.components.KitAction("Export PCAP", Icons.Filled.Download, { onExportPcap(o) })
         }
-        Spacer(Modifier.height(28.dp))
     }
 }
 
 @Composable
-private fun Badge(text: String, color: Color) {
-    Box(
-        Modifier.background(color.copy(alpha = 0.18f), CircleShape).padding(horizontal = 12.dp, vertical = 5.dp)
-    ) { Text(text, color = color, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
-}
+private fun Badge(text: String, @Suppress("UNUSED_PARAMETER") color: Color) = com.rocketgod.warble.ui.components.Tag(text)
 
 @Composable
-private fun Section(title: String, accent: Color) {
-    Spacer(Modifier.height(18.dp))
-    Text(title, color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-    Box(Modifier.fillMaxWidth().height(1.dp).background(Palette.line))
-    Spacer(Modifier.height(6.dp))
-}
+private fun Section(title: String, @Suppress("UNUSED_PARAMETER") accent: Color) = com.rocketgod.warble.ui.components.KitSection(title)
 
 @Composable
-private fun Field(label: String, value: String) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 7.dp)) {
-        Text(label, color = Palette.muted, fontFamily = Mono, fontSize = 14.sp, modifier = Modifier.width(130.dp))
-        Text(value, color = Palette.ink, fontFamily = Mono, fontSize = 14.sp, modifier = Modifier.weight(1f))
-    }
-}
+private fun Field(label: String, value: String) = com.rocketgod.warble.ui.components.KitField(label, value)
 
 private fun signalLabel(t: String) = when (t) { "WIFI" -> "WiFi"; "CELL" -> "Cell tower"; else -> "Bluetooth" }
 

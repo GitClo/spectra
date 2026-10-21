@@ -81,74 +81,54 @@ fun PmkidScreen(
         }.onFailure { note = "share failed: ${it.message}" }
     }
 
-    Column(Modifier.fillMaxSize().background(Palette.paper).padding(16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier.size(42.dp).background(Palette.surface, CircleShape)
-                    .border(1.dp, accent.copy(alpha = 0.5f), CircleShape).clickable { onBack() },
-                contentAlignment = Alignment.Center
-            ) { Icon(Icons.Filled.ArrowBack, "back", tint = accent, modifier = Modifier.size(22.dp)) }
-            Spacer(Modifier.width(12.dp))
-            Text("Captures (${pmkids.size})", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-        }
-        Spacer(Modifier.height(4.dp))
-        Text(
-            note ?: "Passive PMKIDs (🔑) + 4-way handshakes (🤝) grabbed when a client associates. Export is hashcat 22000.",
-            color = if (note != null) accent else Palette.muted, fontFamily = Mono, fontSize = 11.sp
+    val enabled = pmkids.isNotEmpty()
+    Column(Modifier.fillMaxSize()) {
+        com.rocketgod.warble.ui.components.BackTopBar(
+            "Captures", onBack, subtitle = "${pmkids.size} PMKIDs & handshakes · hashcat 22000",
+            actions = {
+                androidx.compose.material3.IconButton(onClick = onMap, enabled = enabled) { Icon(Icons.Filled.Map, "Show on map") }
+            }
         )
-        Spacer(Modifier.height(12.dp))
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
-            val enabled = pmkids.isNotEmpty()
-            @Composable
-            fun Btn(label: String, onClick: () -> Unit) {
-                Text(label, color = if (enabled) inkOn(accent) else Palette.muted, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp,
-                    modifier = Modifier.padding(end = 10.dp)
-                        .background(if (enabled) accent else Palette.surface, RoundedCornerShape(9.dp))
-                        .clickable(enabled = enabled) { onClick() }
-                        .padding(horizontal = 18.dp, vertical = 10.dp))
-            }
-            Btn("COPY") { clip.setText(AnnotatedString(payload())); note = "Copied ${pmkids.size} hashes ✓" }
-            Btn("SAVE") { note = "Saved → ${save()}" }
-            Btn("SEND") { share() }
-            Row(
-                Modifier.border(1.dp, accent, RoundedCornerShape(9.dp)).clickable(enabled = enabled) { onMap() }
-                    .padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Filled.Map, null, tint = if (enabled) accent else Palette.muted, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(6.dp))
-                Text("Map", color = if (enabled) accent else Palette.muted, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+        Column(Modifier.padding(horizontal = 16.dp)) {
+            Text(
+                note ?: "Passive PMKIDs and 4-way handshakes, captured when a client associates.",
+                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, color = if (note != null) accent else androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(12.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+                androidx.compose.material3.Button(onClick = { clip.setText(AnnotatedString(payload())); note = "Copied ${pmkids.size} hashes ✓" },
+                    enabled = enabled, modifier = Modifier.weight(1f)) { Text("Copy all") }
+                androidx.compose.material3.FilledTonalButton(onClick = { note = "Saved → ${save()}" }, enabled = enabled, modifier = Modifier.weight(1f)) { Text("Save") }
+                androidx.compose.material3.FilledTonalButton(onClick = { share() }, enabled = enabled, modifier = Modifier.weight(1f)) { Text("Send") }
             }
         }
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(8.dp))
         if (pmkids.isEmpty()) {
-            Text("No PMKIDs captured yet.\nPlug in an external adapter and drive — a PMKID is grabbed passively when a client joins a network.",
-                color = Palette.muted, fontFamily = Mono, fontSize = 13.sp)
+            com.rocketgod.warble.ui.components.EmptyState(Icons.Filled.Wifi, "No captures yet",
+                "Plug in an external adapter and drive. A PMKID is grabbed passively when a client joins a network.")
         } else {
             LazyColumn(Modifier.fillMaxWidth()) {
                 items(pmkids, key = { it.pmkid }) { p ->
-                    Row(
-                        Modifier.fillMaxWidth().clickable { onSelect(p.pmkid) }.padding(vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Filled.Wifi, null, tint = accent, modifier = Modifier.size(22.dp))
-                        Spacer(Modifier.width(10.dp))
-                        Column(Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(if (p.kind == 2) "🤝 HS" else "🔑 PMKID", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                                Spacer(Modifier.width(6.dp))
-                                Text(p.ssid?.ifBlank { null } ?: "<hidden>", color = Palette.ink, fontFamily = Mono, fontSize = 16.sp, maxLines = 1)
+                    androidx.compose.material3.ListItem(
+                        modifier = Modifier.clickable { onSelect(p.pmkid) },
+                        leadingContent = { com.rocketgod.warble.ui.components.CategoryAvatar(com.rocketgod.warble.domain.model.DeviceCategory.WIFI_AP) },
+                        headlineContent = { Text(p.ssid?.ifBlank { null } ?: "Hidden network", maxLines = 1) },
+                        supportingContent = {
+                            Column {
+                                Text(p.bssid, style = com.rocketgod.warble.ui.theme.CodeStyle, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("${if (p.kind == 2) "Handshake" else "PMKID"} · ch ${p.channel} · ${p.rssi} dBm", style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
                             }
-                            Text("${p.bssid} · ch ${p.channel}", color = Palette.muted, fontFamily = Mono, fontSize = 12.sp, maxLines = 1)
+                        },
+                        trailingContent = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (p.lat != null && p.lng != null) Icon(Icons.Filled.LocationOn, "Located", tint = androidx.compose.material3.MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                Icon(Icons.Filled.ChevronRight, null)
+                            }
                         }
-                        if (p.lat != null && p.lng != null) {
-                            Icon(Icons.Filled.LocationOn, "located", tint = Palette.gold, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(4.dp))
-                        }
-                        Icon(Icons.Filled.ChevronRight, null, tint = Palette.muted, modifier = Modifier.width(20.dp))
-                    }
-                    Box(Modifier.fillMaxWidth().height(1.dp).background(Palette.line.copy(alpha = 0.35f)))
+                    )
+                    androidx.compose.material3.HorizontalDivider(Modifier.padding(start = 72.dp), color = androidx.compose.material3.MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 }
-                item { Spacer(Modifier.height(30.dp)) }
+                item { Spacer(Modifier.height(24.dp)) }
             }
         }
     }

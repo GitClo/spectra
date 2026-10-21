@@ -137,7 +137,7 @@ fun BeastDiagDialog(accent: Color, provider: () -> String, onClose: () -> Unit,
     Dialog(onDismissRequest = onClose) {
         Surface(color = Palette.panel, shape = RoundedCornerShape(16.dp)) {
             Column(Modifier.padding(16.dp).fillMaxWidth()) {
-                Text("Diagnostic logs", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text("Diagnostic logs", style = androidx.compose.material3.MaterialTheme.typography.titleMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
                 Spacer(Modifier.height(4.dp))
                 if (saved != null) {
 
@@ -148,15 +148,15 @@ fun BeastDiagDialog(accent: Color, provider: () -> String, onClose: () -> Unit,
                             .padding(horizontal = 10.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("✓", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold,
+                        Text("✓", color = accent, fontFamily = AppFont, fontWeight = FontWeight.Bold,
                             fontSize = 20.sp, modifier = Modifier.scale(0.7f + 0.6f * glow).alpha(glow))
                         Spacer(Modifier.width(8.dp))
                         Column {
-                            Text("SAVED", color = accent, fontFamily = Mono,
+                            Text("SAVED", color = accent, fontFamily = AppFont,
                                 fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            Text(saved!!, color = Palette.ink, fontFamily = Mono, fontSize = 12.sp)
+                            Text(saved!!, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
                             Text("Tap SHARE to send it straight out — no need to find the file.",
-                                color = Palette.muted, fontFamily = Mono, fontSize = 12.sp)
+                                style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 } else {
@@ -165,7 +165,7 @@ fun BeastDiagDialog(accent: Color, provider: () -> String, onClose: () -> Unit,
                             ?: if (copied >= 0) "Copied $copied chars ✓ (big logs get truncated — use SAVE)"
                             else "Live · $lineCount lines · newest first. SAVE or SHARE for big logs (chronological).",
                         color = if (saveErr != null) Color(0xFFE4794B) else if (copied >= 0) accent else Palette.muted,
-                        fontFamily = Mono, fontSize = 13.sp)
+                        fontFamily = AppFont, fontSize = 13.sp)
                 }
                 Spacer(Modifier.height(10.dp))
                 Column(
@@ -173,13 +173,13 @@ fun BeastDiagDialog(accent: Color, provider: () -> String, onClose: () -> Unit,
                         .background(Palette.surface, RoundedCornerShape(8.dp)).padding(10.dp)
                 ) {
                     androidx.compose.foundation.text.selection.SelectionContainer {
-                        Text(body, color = Palette.ink, fontFamily = Mono, fontSize = 13.sp)
+                        Text(body, color = Palette.ink, fontFamily = com.rocketgod.warble.ui.theme.CodeFont, fontSize = 13.sp)
                     }
                 }
                 Spacer(Modifier.height(14.dp))
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "COPY", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp,
+                        "COPY", style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier
                             .glassAction(accent, RoundedCornerShape(9.dp))
                             .clickable {
@@ -191,7 +191,7 @@ fun BeastDiagDialog(accent: Color, provider: () -> String, onClose: () -> Unit,
                     )
                     Spacer(Modifier.width(12.dp))
                     Text(
-                        "SAVE", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp,
+                        "SAVE", style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier
                             .glassAction(accent, RoundedCornerShape(9.dp))
                             .clickable {
@@ -203,7 +203,7 @@ fun BeastDiagDialog(accent: Color, provider: () -> String, onClose: () -> Unit,
                     )
                     Spacer(Modifier.width(10.dp))
                     Text(
-                        "SHARE", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp,
+                        "SHARE", style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier
                             .glassAction(accent, RoundedCornerShape(9.dp))
                             .clickable { saveErr = null; shareLog() }
@@ -211,7 +211,7 @@ fun BeastDiagDialog(accent: Color, provider: () -> String, onClose: () -> Unit,
                     )
                     Spacer(Modifier.width(12.dp))
                     Text(
-                        "CLOSE", color = Palette.muted, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp,
+                        "CLOSE", style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.clickable { onClose() }.padding(horizontal = 12.dp, vertical = 10.dp)
                     )
                 }

@@ -88,12 +88,12 @@ fun ChannelAnalyzerTool(contacts: List<Contact>, accent: Color) {
             modifier = Modifier.fillMaxWidth().height(34.dp).padding(start = 36.dp, end = 36.dp)) {
             Icon(Icons.Filled.BarChart, null, tint = accent, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(7.dp))
-            Text("Channel Analyzer", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 15.sp,
+            Text("Channel Analyzer", style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
                 maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
 
             if (total > 0) {
                 Spacer(Modifier.width(6.dp))
-                Text("$total APs", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 12.sp,
+                Text("$total APs", style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = accent,
                     maxLines = 1, softWrap = false,
                     modifier = Modifier.background(accent.copy(alpha = 0.16f), RoundedCornerShape(8.dp)).padding(horizontal = 9.dp, vertical = 3.dp))
             }
@@ -101,7 +101,7 @@ fun ChannelAnalyzerTool(contacts: List<Contact>, accent: Color) {
 
         Text(if (busiest != null) "Live · busiest ch $busiest · normalized to the fullest bar"
              else "Live · scanning for Wi-Fi…",
-            color = Palette.muted, fontFamily = Mono, fontSize = 11.sp, maxLines = 2,
+            style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 8.dp))
 
@@ -110,9 +110,9 @@ fun ChannelAnalyzerTool(contacts: List<Contact>, accent: Color) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Filled.Wifi, null, tint = Palette.muted, modifier = Modifier.size(40.dp))
                     Spacer(Modifier.height(10.dp))
-                    Text("No Wi-Fi in range yet", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text("No Wi-Fi in range yet", style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
                     Spacer(Modifier.height(4.dp))
-                    Text("Bars fill in as access points are seen", color = Palette.muted, fontFamily = Mono, fontSize = 12.sp)
+                    Text("Bars fill in as access points are seen", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             return
@@ -145,7 +145,7 @@ private fun BandBars(label: String, bandColor: Color, chans: List<Chan>, maxCoun
             .border(1.dp, bandColor.copy(alpha = 0.30f), RoundedCornerShape(10.dp))
             .padding(top = 4.dp, bottom = 2.dp, start = 6.dp, end = 6.dp)
     ) {
-        Text(label, color = bandColor, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+        Text(label, style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = bandColor,
             textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(bottom = 2.dp))
 
         Row(
@@ -171,7 +171,7 @@ private fun Bar(c: Chan, maxCount: Int, hot: Boolean, accent: Color, modifier: M
         verticalArrangement = Arrangement.Bottom
     ) {
         Text(if (c.count > 0) "${c.count}" else "", color = if (hot) accent else Palette.muted,
-            fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 9.sp, maxLines = 1)
+            fontFamily = AppFont, fontWeight = FontWeight.Bold, fontSize = 9.sp, maxLines = 1)
         Spacer(Modifier.height(2.dp))
 
         Box(Modifier.weight(1f).fillMaxWidth(0.74f), contentAlignment = Alignment.BottomCenter) {
@@ -186,7 +186,7 @@ private fun Bar(c: Chan, maxCount: Int, hot: Boolean, accent: Color, modifier: M
             )
         }
         Spacer(Modifier.height(3.dp))
-        Text("${c.ch}", color = if (hot) accent else Palette.ink, fontFamily = Mono,
+        Text("${c.ch}", color = if (hot) accent else Palette.ink, fontFamily = AppFont,
             fontWeight = if (hot) FontWeight.Bold else FontWeight.Normal, fontSize = 10.sp,
             textAlign = TextAlign.Center, maxLines = 1)
     }

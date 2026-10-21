@@ -101,31 +101,30 @@ fun SatelliteListScreen(gnss: GnssStat, logged: List<GnssSatEntity>, accent: Col
     val rows = if (liveViews.isNotEmpty()) liveViews else logged.map { it.toView(gnss.leapSeconds) }
     val liveNow = liveViews.isNotEmpty()
 
-    Box(Modifier.fillMaxSize().background(Palette.paper)) {
+    Column(Modifier.fillMaxSize()) {
+        com.rocketgod.warble.ui.components.BackTopBar(
+            "Satellites",
+            onBack,
+            subtitle = if (liveNow) "${gnss.usedInFix} used in fix · ${gnss.total} in view" else "No live fix · ${logged.size} logged"
+        )
         LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
             item {
-                Spacer(Modifier.height(14.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.ArrowBack, "back", tint = Palette.ink, modifier = Modifier.clickable { onBack() })
-                    Spacer(Modifier.width(12.dp))
-                    Text("SATELLITES", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                }
                 Text(
-                    if (liveNow) "${gnss.usedInFix} used in fix · ${gnss.total} in view — tap a satellite for full detail"
-                    else "No live fix — showing ${logged.size} logged satellites. Go outside for a live sky.",
-                    color = Palette.muted, fontFamily = Mono, fontSize = 12.sp
+                    if (liveNow) "Tap a satellite for full detail."
+                    else "Showing logged satellites. Go outside for a live sky.",
+                    style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 if (gnss.leapSeconds != null) {
                     Spacer(Modifier.height(4.dp))
-                    Text("GPS→UTC leap seconds (from broadcast): ${gnss.leapSeconds}", color = accent, fontFamily = Mono, fontSize = 11.sp)
+                    Text("GPS→UTC leap seconds (from broadcast): ${gnss.leapSeconds}", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = accent)
                 }
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(8.dp))
             }
             val byConst = rows.groupBy { it.constellation }.toList().sortedByDescending { it.second.size }
             byConst.forEach { (cons, sats) ->
                 item(key = "h_$cons") {
-                    Text("$cons · ${sats.size}", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp, bottom = 6.dp))
+                    Text("$cons · ${sats.size}", style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 16.dp, bottom = 4.dp))
                 }
                 items(sats.sortedByDescending { it.cn0 }, key = { "${it.id}" }) { s -> SatRow(s, accent, onSelect) }
             }
@@ -140,19 +139,19 @@ private fun SatRow(s: SatView, accent: Color, onSelect: (String) -> Unit) {
         Modifier.fillMaxWidth().clickable { onSelect(s.id) }.padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(Icons.Filled.SatelliteAlt, null, tint = if (s.usedInFix) accent else Palette.muted, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(10.dp))
+        Icon(Icons.Filled.SatelliteAlt, null, tint = if (s.usedInFix) accent else Palette.muted, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text("${s.constellation} PRN ${s.svid}", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            Text("${s.constellation} PRN ${s.svid}", style = androidx.compose.material3.MaterialTheme.typography.bodyLarge, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
             Text(
                 "el ${s.elevation.toInt()}° · az ${s.azimuth.toInt()}°" + if (s.usedInFix) " · in fix" else "",
-                color = Palette.muted, fontFamily = Mono, fontSize = 11.sp
+                style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         SignalBars(s.cn0, accent)
         Spacer(Modifier.width(8.dp))
-        Text(if (s.cn0 > 0f) "${s.cn0.toInt()}" else "—", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-        Text(" dB", color = Palette.muted, fontFamily = Mono, fontSize = 10.sp)
+        Text(if (s.cn0 > 0f) "${s.cn0.toInt()}" else "—", color = Palette.ink, fontFamily = AppFont, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        Text(" dB", color = Palette.muted, fontFamily = AppFont, fontSize = 10.sp)
         Icon(Icons.Filled.ChevronRight, null, tint = Palette.muted, modifier = Modifier.width(18.dp))
     }
     Box(Modifier.fillMaxWidth().height(1.dp).background(Palette.line.copy(alpha = 0.18f)))
@@ -179,29 +178,17 @@ fun SatelliteDetailScreen(id: String, gnss: GnssStat, logged: List<GnssSatEntity
     val s = merge(live, log, gnss.leapSeconds)
     val df = SimpleDateFormat("MMM d · h:mm a", Locale.US)
 
-    Column(Modifier.fillMaxSize().background(Palette.paper).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
-        Spacer(Modifier.height(14.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Filled.ArrowBack, "back", tint = Palette.ink, modifier = Modifier.clickable { onBack() })
-            Spacer(Modifier.width(12.dp))
-            Text("SATELLITE", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-        }
+    com.rocketgod.warble.ui.components.ScrollScreen(
+        title = s?.let { "${it.constellation} · PRN ${it.svid}" } ?: "Satellite",
+        subtitle = s?.let { if (it.usedInFix) "Used in position fix" else "In view, not used in fix" },
+        onBack = onBack
+    ) {
         if (s == null) {
             Spacer(Modifier.height(16.dp))
-            Text("This satellite is no longer in view and isn't in the log.", color = Palette.muted, fontFamily = Mono, fontSize = 13.sp)
-            return
+            Text("This satellite is no longer in view and isn't in the log.", style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
+            return@ScrollScreen
         }
-        Spacer(Modifier.height(6.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Filled.SatelliteAlt, null, tint = accent, modifier = Modifier.size(26.dp))
-            Spacer(Modifier.width(10.dp))
-            Text("${s.constellation} · PRN ${s.svid}", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 22.sp)
-        }
-        Text(if (s.usedInFix) "Currently used in position fix" else "In view, not used in fix",
-            color = if (s.usedInFix) accent else Palette.muted, fontFamily = Mono, fontSize = 12.sp,
-            modifier = Modifier.padding(top = 2.dp))
-
-        Spacer(Modifier.height(16.dp))
         Section("SIGNAL & ORBIT", accent)
         Field("PRN / SV ID", "${s.svid}  — the satellite's ID slot as far as your phone is concerned", accent)
         Field("Signal C/N0", if (s.cn0 > 0f) "${"%.1f".format(s.cn0)} dB-Hz" else "—", accent)
@@ -215,7 +202,7 @@ fun SatelliteDetailScreen(id: String, gnss: GnssStat, logged: List<GnssSatEntity
         Spacer(Modifier.height(16.dp))
         Section("BROADCAST NAV MESSAGE", accent)
         Text("Decoded live from the GPS L1 C/A broadcast. Blank fields mean this phone's chipset doesn't expose raw nav messages, or the relevant subframe hasn't been received yet.",
-            color = Palette.muted, fontFamily = Mono, fontSize = 10.sp, modifier = Modifier.padding(bottom = 8.dp))
+            style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 8.dp))
         Field("Health bits", s.health?.let { "$it  (${if (it == 0) "healthy" else "reporting a fault"})" } ?: "—", accent)
         Field("URA index", s.uraIndex?.let { "$it  (operator accuracy claim)" } ?: "—", accent)
         Field("SV configuration code", s.svConfig?.let { "$it  (hardware block)" } ?: "—", accent)
@@ -229,24 +216,14 @@ fun SatelliteDetailScreen(id: String, gnss: GnssStat, logged: List<GnssSatEntity
             s.lastSeen?.let { Field("Last seen", df.format(Date(it)), accent) }
             s.timesSeen?.let { Field("Times logged", "$it", accent) }
         }
-        Spacer(Modifier.height(30.dp))
     }
 }
 
 @Composable
-private fun Section(title: String, accent: Color) {
-    Text(title, color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp,
-        modifier = Modifier.padding(bottom = 6.dp))
-}
+private fun Section(title: String, @Suppress("UNUSED_PARAMETER") accent: Color) = com.rocketgod.warble.ui.components.KitSection(title)
 
 @Composable
-private fun Field(label: String, value: String, accent: Color) {
-    Column(Modifier.fillMaxWidth().padding(vertical = 7.dp)) {
-        Text(label, color = Palette.muted, fontFamily = Mono, fontSize = 11.sp)
-        Text(value, color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-    }
-    Box(Modifier.fillMaxWidth().height(1.dp).background(Palette.line.copy(alpha = 0.18f)))
-}
+private fun Field(label: String, value: String, @Suppress("UNUSED_PARAMETER") accent: Color) = com.rocketgod.warble.ui.components.KitField(label, value)
 
 private fun yesNo(b: Boolean) = if (b) "yes" else "no"
 

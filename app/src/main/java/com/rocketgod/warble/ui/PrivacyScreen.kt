@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalUriHandler
@@ -123,27 +124,14 @@ fun PrivacyScreen(
 
     Column(Modifier.fillMaxSize().background(Palette.paper)) {
 
-        Row(
-            Modifier.fillMaxWidth().zIndex(1f).background(Palette.paper).padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                Modifier.size(44.dp).background(Palette.surface, CircleShape)
-                    .border(1.dp, accent.copy(alpha = 0.6f), CircleShape).clickable { onBack() },
-                contentAlignment = Alignment.Center
-            ) { Icon(Icons.Filled.ArrowBack, "back", tint = accent, modifier = Modifier.size(22.dp)) }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text("Privacy & uploads", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                Text("Pan your home under the centre pin", color = accent, fontFamily = Mono, fontSize = 13.sp)
-            }
-            Text("Done", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 15.sp,
-                modifier = Modifier.clickable { onBack() }.padding(horizontal = 8.dp, vertical = 6.dp))
-        }
+        com.rocketgod.warble.ui.components.BackTopBar(
+            "Privacy & uploads", onBack, subtitle = "Pan your home under the centre pin",
+            actions = { androidx.compose.material3.TextButton(onClick = onBack) { Text("Done") } }
+        )
 
         Box(Modifier.fillMaxWidth().weight(1f).padding(horizontal = 12.dp).clipToBounds()) {
             AndroidView(
-                modifier = Modifier.fillMaxSize().clipToBounds().border(1.dp, Palette.line, RoundedCornerShape(12.dp)),
+                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(16.dp)),
                 factory = { ctx ->
                     Configuration.getInstance().userAgentValue = ctx.packageName
                     MapView(ctx).apply {
@@ -179,130 +167,110 @@ fun PrivacyScreen(
                     mv.invalidate()
                 }
             )
-            Text(
-                "Drag to pan · pinch to zoom",
-                color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+            androidx.compose.material3.Surface(
+                shape = RoundedCornerShape(50), color = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.95f),
                 modifier = Modifier.align(Alignment.TopCenter).padding(8.dp)
-                    .background(Palette.surface.copy(alpha = 0.92f), RoundedCornerShape(8.dp))
-                    .border(1.dp, accent.copy(alpha = 0.5f), RoundedCornerShape(8.dp)).padding(horizontal = 10.dp, vertical = 6.dp)
-            )
+            ) {
+                Text("Drag to pan · pinch to zoom", style = androidx.compose.material3.MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
+            }
         }
 
         Column(
-            Modifier.fillMaxWidth().background(Palette.paper).heightIn(max = 340.dp)
+            Modifier.fillMaxWidth().heightIn(max = 340.dp)
                 .verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)
         ) {
             Spacer(Modifier.height(12.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("ZONE RADIUS", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text("Zone radius", style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = androidx.compose.material3.MaterialTheme.colorScheme.primary)
                 Text(if (radiusM >= 1000f) "%.1f km".format(radiusM / 1000f) else "${radiusM.toInt()} m",
-                    color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                    style = androidx.compose.material3.MaterialTheme.typography.titleLarge)
             }
-            Slider(
-                value = radiusM, onValueChange = { radiusM = it }, valueRange = 100f..2000f,
-                colors = androidx.compose.material3.SliderDefaults.colors(thumbColor = accent, activeTrackColor = accent)
-            )
+            Slider(value = radiusM, onValueChange = { radiusM = it }, valueRange = 100f..2000f)
 
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(150 to "150 m", 300 to "300 m", 500 to "500 m", 1000 to "1 km").forEach { (m, lbl) ->
-                    val sel = radiusM.toInt() == m
-                    Box(
-                        Modifier.weight(1f)
-                            .background(if (sel) accent.copy(alpha = 0.22f) else Palette.surface, RoundedCornerShape(9.dp))
-                            .border(1.dp, if (sel) accent else Palette.line, RoundedCornerShape(9.dp))
-                            .clickable { radiusM = m.toFloat() }.padding(vertical = 9.dp),
-                        contentAlignment = Alignment.Center
-                    ) { Text(lbl, color = if (sel) accent else Palette.muted, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1) }
+                    androidx.compose.material3.FilterChip(
+                        selected = radiusM.toInt() == m, onClick = { radiusM = m.toFloat() },
+                        label = { Text(lbl, maxLines = 1) }, modifier = Modifier.weight(1f)
+                    )
                 }
             }
             Spacer(Modifier.height(10.dp))
             OutlinedTextField(
                 value = label, onValueChange = { label = it.take(24) },
-                label = { Text("Zone name", fontFamily = Mono, fontSize = 14.sp) },
+                label = { Text("Zone name") },
                 singleLine = true,
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Palette.surface, unfocusedContainerColor = Palette.surface,
-                    focusedTextColor = Palette.ink, unfocusedTextColor = Palette.ink,
-                    focusedIndicatorColor = accent, cursorColor = accent, focusedLabelColor = accent
-                ),
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(10.dp))
             val canSave = label.isNotBlank()
-            Box(
-                Modifier.fillMaxWidth().glassAction(if (canSave) accent else Palette.muted)
-                    .clickable(enabled = canSave) {
-                        val c = mapRef.value?.mapCenter
-                        if (c != null) {
-                            vm.addPrivacyZone(c.latitude, c.longitude, radiusM.toDouble(), label.trim())
-                            label = "Home"; radiusM = 300f
-                        }
-                    }.padding(vertical = 14.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(if (canSave) "SAVE THIS ZONE" else "NAME THE ZONE FIRST",
-                    color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            }
+            androidx.compose.material3.Button(
+                onClick = {
+                    val c = mapRef.value?.mapCenter
+                    if (c != null) {
+                        vm.addPrivacyZone(c.latitude, c.longitude, radiusM.toDouble(), label.trim())
+                        label = "Home"; radiusM = 300f
+                    }
+                },
+                enabled = canSave, modifier = Modifier.fillMaxWidth()
+            ) { Text(if (canSave) "Save this zone" else "Name the zone first") }
             Spacer(Modifier.height(18.dp))
 
-            Text("EXCLUSION ZONES (${zones.size})", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            com.rocketgod.warble.ui.components.KitSection("Exclusion zones (${zones.size})")
             if (zones.isEmpty()) {
-                Text("No zones yet — pan your home under the centre pin and save.", color = Palette.muted, fontFamily = Mono, fontSize = 14.sp, modifier = Modifier.padding(vertical = 6.dp))
+                Text("No zones yet. Pan your home under the centre pin and save.", style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 6.dp))
             } else {
                 zones.forEach { z -> ZoneRow(z, accent, onToggle = { vm.setZoneEnabled(z.id, it) }, onDelete = { vm.deletePrivacyZone(z.id) }) }
             }
             Spacer(Modifier.height(16.dp))
 
-            Text("BLOCKED DEVICES (${blocked.size})", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            Text("Added from a device's detail screen (the “Exclude from uploads” shield). Blocks it everywhere it's seen — e.g. your phone hotspot or car.",
-                color = Palette.muted, fontFamily = Mono, fontSize = 13.sp)
+            com.rocketgod.warble.ui.components.KitSection("Blocked devices (${blocked.size})")
+            Text("Added from a device's detail screen (Exclude from uploads). Blocks it everywhere it's seen, e.g. your phone hotspot or car.",
+                style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
             if (blocked.isEmpty()) {
-                Text("No blocked devices.", color = Palette.muted, fontFamily = Mono, fontSize = 14.sp, modifier = Modifier.padding(vertical = 6.dp))
+                Text("No blocked devices.", style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 6.dp))
             } else {
                 blocked.forEach { b ->
-                    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.Shield, null, tint = accent, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(10.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(b.label?.ifBlank { b.bssid } ?: b.bssid, color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
-                            Text(b.bssid, color = Palette.muted, fontFamily = Mono, fontSize = 13.sp)
+                    androidx.compose.material3.ListItem(
+                        colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+                        leadingContent = { Icon(Icons.Filled.Shield, null, tint = androidx.compose.material3.MaterialTheme.colorScheme.primary) },
+                        headlineContent = { Text(b.label?.ifBlank { b.bssid } ?: b.bssid, maxLines = 1) },
+                        supportingContent = { Text(b.bssid, style = com.rocketgod.warble.ui.theme.CodeStyle) },
+                        trailingContent = {
+                            androidx.compose.material3.IconButton(onClick = { vm.unblockDevice(b.bssid) }) { Icon(Icons.Filled.Delete, "Unblock") }
                         }
-                        Icon(Icons.Filled.Delete, "unblock", tint = Palette.muted,
-                            modifier = Modifier.size(20.dp).clickable { vm.unblockDevice(b.bssid) })
-                    }
+                    )
                 }
             }
             Spacer(Modifier.height(16.dp))
 
             if (excluded >= 0) {
                 Text("$excluded stored records currently withheld from uploads.",
-                    color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = androidx.compose.material3.MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.height(8.dp))
             }
-            Text("Note: this only prevents FUTURE uploads. Anything already sent to WiGLE is public and must be removed through WiGLE's own process.",
-                color = Palette.muted, fontFamily = Mono, fontSize = 13.sp)
-            Spacer(Modifier.height(8.dp))
-            Text("Open WiGLE removal info ›", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp,
-                modifier = Modifier.clickable { runCatching { uri.openUri("https://wigle.net/") } })
+            Text("This only prevents future uploads. Anything already sent to WiGLE is public and must be removed through WiGLE's own process.",
+                style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
+            androidx.compose.material3.TextButton(onClick = { runCatching { uri.openUri("https://wigle.net/") } }) { Text("Open WiGLE removal info") }
             Spacer(Modifier.height(24.dp))
         }
     }
 }
 
 @Composable
-private fun ZoneRow(z: PrivacyZone, accent: Color, onToggle: (Boolean) -> Unit, onDelete: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(z.label, color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
-            Text("${z.radiusM.toInt()} m radius", color = Palette.muted, fontFamily = Mono, fontSize = 13.sp)
+private fun ZoneRow(z: PrivacyZone, @Suppress("UNUSED_PARAMETER") accent: Color, onToggle: (Boolean) -> Unit, onDelete: () -> Unit) {
+    androidx.compose.material3.ListItem(
+        colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+        headlineContent = { Text(z.label, maxLines = 1) },
+        supportingContent = { Text("${z.radiusM.toInt()} m radius") },
+        trailingContent = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Switch(checked = z.enabled, onCheckedChange = onToggle)
+                androidx.compose.material3.IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, "Delete zone") }
+            }
         }
-        Switch(checked = z.enabled, onCheckedChange = onToggle,
-            colors = SwitchDefaults.colors(checkedThumbColor = accent, checkedTrackColor = accent.copy(alpha = 0.5f)))
-        Spacer(Modifier.width(8.dp))
-        Icon(Icons.Filled.Delete, "delete zone", tint = Palette.muted,
-            modifier = Modifier.size(20.dp).clickable { onDelete() })
-    }
+    )
 }

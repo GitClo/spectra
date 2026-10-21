@@ -1,5 +1,9 @@
 package com.rocketgod.warble.ui
 
+import androidx.compose.material.icons.filled.KeyboardArrowRight
+
+import androidx.compose.ui.draw.clip
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -126,65 +130,37 @@ fun HelpScreen(
                 }
         }
     }
-    Column(
-        Modifier.fillMaxSize().background(Palette.paper).verticalScroll(rememberScrollState()).padding(16.dp)
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier.size(42.dp).background(Palette.surface, CircleShape).border(1.dp, accent.copy(alpha = 0.5f), CircleShape)
-                    .clickable { onBack() }, contentAlignment = Alignment.Center
-            ) { Icon(Icons.Filled.ArrowBack, "back", tint = accent, modifier = Modifier.size(22.dp)) }
-            Spacer(Modifier.width(12.dp))
-            Row {
-                Text("War", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 24.sp)
-                Text("drive", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 24.sp)
-                Text(" Go", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 24.sp)
-            }
-        }
-        Spacer(Modifier.height(18.dp))
+    com.rocketgod.warble.ui.components.ScrollScreen(title = "Settings & help", subtitle = "Wardrive Go", onBack = onBack) {
+        Spacer(Modifier.height(4.dp))
 
         SettingsGroup(Icons.Filled.Palette, "Appearance", accent, openGroup) {
-            Text("THEME", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            SubHeading("Accent")
+            Text("Theme mode and dynamic color are under More › Appearance.", style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 8.dp))
             Spacer(Modifier.height(8.dp))
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp),
+                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
                 Skin.values().forEach { sk ->
-                    val sel = sk == skin
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(end = 10.dp)
-                            .border(if (sel) 2.dp else 1.dp, if (sel) Color(sk.accentHex) else Palette.line, RoundedCornerShape(24.dp))
-                            .background(Palette.surface, RoundedCornerShape(24.dp))
-                            .clickable { onSkin(sk) }.padding(horizontal = 16.dp, vertical = 12.dp)
-                    ) {
-                        Box(Modifier.size(18.dp).background(Color(sk.accentHex), CircleShape))
-                        Spacer(Modifier.width(9.dp))
-                        Text(sk.display, color = Palette.ink, fontFamily = Mono,
-                            fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal, fontSize = 16.sp)
-                    }
-                }
-            }
-            Spacer(Modifier.height(16.dp))
-            Text("TEXT SIZE", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-            Spacer(Modifier.height(4.dp))
-            Text("Scales all text in the app. Adds to your phone's system font-size setting.",
-                color = Palette.muted, fontFamily = Mono, fontSize = 13.sp)
-            Spacer(Modifier.height(8.dp))
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
-                listOf("Small" to 0.9f, "Default" to 1.0f, "Large" to 1.15f, "Larger" to 1.3f, "Max" to 1.5f).forEach { (label, mult) ->
-                    val sel = kotlin.math.abs(fontScale - mult) < 0.01f
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(end = 10.dp)
-                            .border(if (sel) 2.dp else 1.dp, if (sel) accent else Palette.line, RoundedCornerShape(24.dp))
-                            .background(Palette.surface, RoundedCornerShape(24.dp))
-                            .clickable { onFontScale(mult) }.padding(horizontal = 16.dp, vertical = 12.dp)
-                    ) {
-                        Text(label, color = Palette.ink, fontFamily = Mono,
-                            fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal, fontSize = 16.sp)
-                    }
+                    androidx.compose.material3.FilterChip(
+                        selected = sk == skin, onClick = { onSkin(sk) }, label = { Text(sk.display) },
+                        leadingIcon = { Box(Modifier.size(16.dp).background(Color(sk.accentHex), CircleShape)) }
+                    )
                 }
             }
             Spacer(Modifier.height(12.dp))
+            SubHeading("Text size")
+            Text("Scales all text in the app, on top of your phone's system font size.", style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 8.dp))
+            Spacer(Modifier.height(8.dp))
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp),
+                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+                listOf("Small" to 0.9f, "Default" to 1.0f, "Large" to 1.15f, "Larger" to 1.3f, "Max" to 1.5f).forEach { (label, mult) ->
+                    androidx.compose.material3.FilterChip(
+                        selected = kotlin.math.abs(fontScale - mult) < 0.01f, onClick = { onFontScale(mult) }, label = { Text(label) }
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
             SettingSwitch("Dark map", "Use a dark basemap on every map in the app — field report, finds map, category maps and privacy zones.", darkMap, false, accent, onDarkMap)
             Spacer(Modifier.height(8.dp))
             SettingSwitch("Reduce animations", "Turn off the score counter's roll/pop and alert-banner pop-ins (including offensive-device alerts). Numbers and banners update instantly instead.", reduceMotion, false, accent, onReduceMotion)
@@ -209,9 +185,9 @@ fun HelpScreen(
             Spacer(Modifier.height(8.dp))
             SettingSwitch("Buzz on spot", "Vibrate on those spot alerts. A paired Wear OS watch mirrors it, so your wrist taps. (Needs System notifications on.)", buzzOnSpot, true, accent, onBuzzOnSpot)
             Spacer(Modifier.height(14.dp))
-            Text("IN-APP BANNERS", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-            Text("The pop-down banner at the top of the dashboard. Choose which alerts drop down — any you turn off just keep the banner on its normal rotating info cards.",
-                color = Palette.muted, fontFamily = Mono, fontSize = 13.sp)
+            SubHeading("In-app banners")
+            Text("The banner at the top of the Scan screen. Alerts you turn off leave it on its rotating info cards.",
+                style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 8.dp))
             Spacer(Modifier.height(8.dp))
             SettingSwitch("Offensive device alerts", "Banner drops down when an offensive/notable device (Flock, camera, drone, tracker, Flipper) is spotted. Turn off if you watch the Offensive Devices tool instead.", offensiveBanners, true, accent, onOffensiveBanners)
             Spacer(Modifier.height(8.dp))
@@ -238,7 +214,7 @@ fun HelpScreen(
         }
 
         SettingsGroup(Icons.Filled.Key, "Keys & privacy", accent, openGroup) {
-            LinkButton(Icons.Filled.Key, "API keys", "WiGLE + WDGWars keys", accent, deep, filled = true) { onApiSettings() }
+            LinkButton(Icons.Filled.Key, "API keys", "WiGLE, WDGWars and CARTO map keys", accent, deep, filled = true) { onApiSettings() }
             Spacer(Modifier.height(10.dp))
             LinkButton(Icons.Filled.Shield, "Privacy & uploads", "Exclusion zones + blocked devices", accent, deep, filled = true) { onPrivacy() }
         }
@@ -279,58 +255,45 @@ fun HelpScreen(
             LinkButton(Icons.Filled.EmojiEvents, "The Pirates", "Join the hangout on Discord", accent, deep, filled = true) { uri.openUri("https://discord.gg/thepirates") }
         }
 
-        Spacer(Modifier.height(18.dp))
-        LinkButton(Icons.Filled.PowerSettingsNew, "Close app", "Stop scanning and fully close", accent, deep, filled = true) { onExitApp() }
-        Spacer(Modifier.height(28.dp))
-    }
-}
-
-@Composable
-private fun SettingsGroup(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, accent: Color, openGroup: MutableState<String?>, content: @Composable () -> Unit) {
-    val open = openGroup.value == title
-    Column(Modifier.fillMaxWidth()) {
-        Row(
-            Modifier.fillMaxWidth()
-                .border(1.dp, if (open) accent.copy(alpha = 0.6f) else Palette.line, RoundedCornerShape(12.dp))
-                .background(Palette.panel, RoundedCornerShape(12.dp))
-                .clickable { openGroup.value = if (open) null else title }.padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Spacer(Modifier.height(16.dp))
+        androidx.compose.material3.OutlinedButton(
+            onClick = onExitApp, modifier = Modifier.fillMaxWidth(),
+            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = androidx.compose.material3.MaterialTheme.colorScheme.error)
         ) {
-            Icon(icon, null, tint = accent, modifier = Modifier.size(20.dp))
-            Spacer(Modifier.width(10.dp))
-            Text(title, color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.weight(1f))
-            Icon(if (open) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown, null, tint = accent, modifier = Modifier.size(26.dp))
+            Icon(Icons.Filled.PowerSettingsNew, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Stop scanning & close app")
         }
-        if (open) {
-            Spacer(Modifier.height(8.dp))
-            content()
-        }
-        Spacer(Modifier.height(10.dp))
     }
 }
 
 @Composable
-private fun SettingSwitch(title: String, sub: String, checked: Boolean, defaultOn: Boolean, accent: Color, onChange: (Boolean) -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().border(1.dp, Palette.line, RoundedCornerShape(12.dp))
-            .background(Palette.surface, RoundedCornerShape(12.dp)).padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(title, color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            Text(sub, color = Palette.muted, fontFamily = Mono, fontSize = 13.sp)
-            Spacer(Modifier.height(3.dp))
-            Text("Default: ${if (defaultOn) "ON" else "OFF"}", color = accent.copy(alpha = 0.85f),
-                fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-        }
-        Spacer(Modifier.width(10.dp))
-        androidx.compose.material3.Switch(
-            checked = checked, onCheckedChange = onChange,
-            colors = androidx.compose.material3.SwitchDefaults.colors(
-                checkedThumbColor = inkOn(accent), checkedTrackColor = accent
-            )
-        )
-    }
+private fun SettingsGroup(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, @Suppress("UNUSED_PARAMETER") accent: Color, openGroup: MutableState<String?>, content: @Composable () -> Unit) {
+    val open = openGroup.value == title
+    com.rocketgod.warble.ui.components.KitExpandableGroup(icon, title, open, onToggle = { openGroup.value = if (open) null else title }) { content() }
+}
+
+/** Small heading inside a settings group. */
+@Composable
+private fun SubHeading(text: String) {
+    Text(text, style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(start = 8.dp, top = 12.dp, bottom = 2.dp))
+}
+
+/** A switch row; shows the factory default only when the current value differs from it. */
+@Composable
+private fun SettingSwitch(title: String, sub: String, checked: Boolean, defaultOn: Boolean, @Suppress("UNUSED_PARAMETER") accent: Color, onChange: (Boolean) -> Unit) {
+    androidx.compose.material3.ListItem(
+        modifier = Modifier.clip(androidx.compose.material3.MaterialTheme.shapes.medium).clickable { onChange(!checked) },
+        colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = Color.Transparent),
+        headlineContent = { Text(title) },
+        supportingContent = {
+            Column {
+                Text(sub)
+                if (checked != defaultOn) Text("Default: ${if (defaultOn) "on" else "off"}", style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 2.dp))
+            }
+        },
+        trailingContent = { androidx.compose.material3.Switch(checked = checked, onCheckedChange = onChange) }
+    )
 }
 
 @Composable
@@ -338,12 +301,12 @@ private fun WifiGoalSetting(goal: Int, accent: Color, onGoal: (Int) -> Unit) {
     var custom by remember(goal) { mutableStateOf(if (goal > 0) goal.toString() else "") }
     val best = goal == 0
     Column(
-        Modifier.fillMaxWidth().border(1.dp, Palette.line, RoundedCornerShape(12.dp))
+        Modifier.fillMaxWidth()
             .background(Palette.surface, RoundedCornerShape(12.dp)).padding(14.dp)
     ) {
-        Text("Watch Wi-Fi gauge goal", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+        Text("Watch Wi-Fi gauge goal", style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
         Text("The target the watch complication's Wi-Fi gauge fills toward. BEST RUN scales it to your best-ever Wi-Fi run so the arc always races your record — or type any fixed number.",
-            color = Palette.muted, fontFamily = Mono, fontSize = 13.sp)
+            style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(10.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -351,7 +314,7 @@ private fun WifiGoalSetting(goal: Int, accent: Color, onGoal: (Int) -> Unit) {
                     .background(if (best) accent.copy(alpha = 0.15f) else Palette.paper, RoundedCornerShape(20.dp))
                     .clickable { custom = ""; onGoal(0) }
                     .padding(horizontal = 16.dp, vertical = 11.dp)
-            ) { Text("BEST RUN", color = if (best) accent else Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp) }
+            ) { Text("BEST RUN", style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = if (best) accent else Palette.ink) }
             Spacer(Modifier.width(10.dp))
             Box(
                 Modifier.weight(1f).border(if (!best) 2.dp else 1.dp, if (!best) accent else Palette.line, RoundedCornerShape(20.dp))
@@ -361,13 +324,13 @@ private fun WifiGoalSetting(goal: Int, accent: Color, onGoal: (Int) -> Unit) {
                 BasicTextField(
                     value = custom,
                     onValueChange = { s -> val d = s.filter { it.isDigit() }.take(7); custom = d; onGoal(d.toIntOrNull() ?: 0) },
-                    textStyle = TextStyle(color = if (!best) accent else Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 15.sp),
+                    textStyle = TextStyle(color = if (!best) accent else Palette.ink, fontFamily = AppFont, fontWeight = FontWeight.Bold, fontSize = 15.sp),
                     singleLine = true,
                     cursorBrush = SolidColor(accent),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     decorationBox = { inner ->
                         Box {
-                            if (custom.isEmpty()) Text("Type a goal #", color = Palette.muted, fontFamily = Mono, fontSize = 14.sp)
+                            if (custom.isEmpty()) Text("Type a goal #", style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
                             inner()
                         }
                     }
@@ -380,15 +343,13 @@ private fun WifiGoalSetting(goal: Int, accent: Color, onGoal: (Int) -> Unit) {
 @Composable
 private fun CreditsCard(accent: Color, deep: Color, uri: androidx.compose.ui.platform.UriHandler) {
     Column(
-        Modifier.fillMaxWidth()
-            .border(1.dp, accent.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
-            .background(Palette.surface, RoundedCornerShape(14.dp)).padding(16.dp)
+        Modifier.fillMaxWidth().background(androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainer, androidx.compose.material3.MaterialTheme.shapes.medium).padding(16.dp)
     ) {
-        Text("CREDITS", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-        Spacer(Modifier.height(10.dp))
-        Text("Special thanks to Arkasha — co-founder of WiGLE, who invented this whole beautiful sickness and has personally cost every one of us a small fortune in gas. Worth every drop. -RocketGod",
-            color = Palette.ink, fontFamily = Mono, fontSize = 14.sp)
-        Spacer(Modifier.height(14.dp))
+        Text("Credits", style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = androidx.compose.material3.MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.height(8.dp))
+        Text("Special thanks to Arkasha, co-founder of WiGLE, who invented this whole beautiful sickness and has personally cost every one of us a small fortune in gas. Worth every drop. -RocketGod",
+            style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
+        Spacer(Modifier.height(8.dp))
         LinkButton(Icons.Filled.Language, "WiGLE.net", "The database we all feed", accent, deep, filled = false) { uri.openUri("https://wigle.net") }
         Spacer(Modifier.height(10.dp))
         LinkButton(Icons.Filled.Language, "WDGWars", "wdgwars.pl — Watch Dogs Go wardriving arena", accent, deep, filled = false) { uri.openUri("https://wdgwars.pl") }
@@ -398,129 +359,108 @@ private fun CreditsCard(accent: Color, deep: Color, uri: androidx.compose.ui.pla
 @Composable
 private fun ExternalAdaptersCard(accent: Color) {
     Row(
-        Modifier.fillMaxWidth().padding(bottom = 12.dp)
-            .border(1.dp, Palette.line, RoundedCornerShape(14.dp))
-            .background(Palette.surface, RoundedCornerShape(14.dp)).padding(14.dp)
+        Modifier.fillMaxWidth().padding(vertical = 4.dp).background(androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainer, androidx.compose.material3.MaterialTheme.shapes.medium).padding(14.dp)
     ) {
-        Box(Modifier.size(40.dp).background(accent.copy(alpha = 0.14f), RoundedCornerShape(11.dp)), contentAlignment = Alignment.Center) {
-            Icon(Icons.Filled.Bolt, null, tint = accent, modifier = Modifier.size(24.dp))
-        }
-        Spacer(Modifier.width(12.dp))
+        Icon(Icons.Filled.Bolt, null, tint = androidx.compose.material3.MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+        Spacer(Modifier.width(14.dp))
         Column {
-            Text("External Wi-Fi Capabilities", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Text("External Wi-Fi capabilities", style = androidx.compose.material3.MaterialTheme.typography.titleSmall)
             Spacer(Modifier.height(4.dp))
             Text("Stock Android can't put its Wi-Fi radio into monitor mode, so client devices stay hidden. Plug in a supported USB adapter over OTG and Wardrive Go taps true monitor mode — no root — running in parallel with the phone's own radios. Its promiscuous 802.11 capture (APs + hidden client stations) merges live into the same radar and field report.",
-                color = Palette.muted, fontFamily = Mono, fontSize = 14.sp)
+                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(12.dp))
 
-            Text("SINGLE-BAND · 2.4 GHz", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            Text("Single-band · 2.4 GHz", style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = androidx.compose.material3.MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(4.dp))
             DeviceBullet("Atheros AR9271", "ath9k_htc", "Alfa AWUS036NHA · TP-Link TL-WN722N v1", accent)
             Spacer(Modifier.height(6.dp))
             DeviceBullet("Ralink RT5370 / RT3070", "rt2800usb", "Superwang · TurboTenna Yagi (high-gain)", accent)
 
             Spacer(Modifier.height(10.dp))
-            Text("DUAL-BAND · 2.4 + 5 GHz", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            Text("Dual-band · 2.4 + 5 GHz", style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = androidx.compose.material3.MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(4.dp))
-            DeviceBullet("MediaTek MT7612U", "mt76x2u", "Alfa AWUS036ACM · Panda PAU0D AC1200", accent)
+            DeviceBullet("MediaTek MT7612U", "mt76x2u", "Alfa AWUS036ACM · Panda PAU0D AC1200 · full 5 GHz incl. DFS", accent)
             Spacer(Modifier.height(6.dp))
-            DeviceBullet("Realtek RTL8821AU", "88xxau", "Alfa AWUS036ACS", accent)
-            Spacer(Modifier.height(6.dp))
-            DeviceBullet("Realtek RTL8814AU", "88xxau", "Alfa AWUS1900 · 4-antenna AC1900", accent)
+            DeviceBullet("Realtek RTL8814AU", "88xxau", "Alfa AWUS1900 · 4-antenna AC1900 · 5 GHz: ch 36–48 and 149–165 only (no DFS channels yet)", accent)
+            Spacer(Modifier.height(10.dp))
+            Text("Single-band in this app", style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = androidx.compose.material3.MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(4.dp))
+            DeviceBullet("Realtek RTL8821AU", "88xxau", "Alfa AWUS036ACS · dual-band chip, but the driver currently captures 2.4 GHz only", accent)
 
             Spacer(Modifier.height(10.dp))
-            Text("ESP32 SCANNERS · serial", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            Text("ESP32 scanners · serial", style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = androidx.compose.material3.MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(4.dp))
             DeviceBullet("ESP32 Marauder", "serial · AP scan", "JustCallMeKoko wardriver + other Marauder boards", accent)
             Text("Access-point discovery over USB-serial (not monitor mode). On a dual-band board (ESP32-C5) it sweeps 2.4 + 5 GHz. APs only — no client-station or handshake capture on serial.",
-                color = Palette.muted, fontFamily = Mono, fontSize = 13.sp, modifier = Modifier.padding(start = 14.dp, top = 2.dp))
+                style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 14.dp, top = 2.dp))
 
             Spacer(Modifier.height(8.dp))
             DeviceBullet("Ghost ESP", "serial · AP scan", "Any Ghost ESP board — Poltergeist, GhostESP Revival, etc.", accent)
             Text("Passive AP discovery over USB-serial with channel, band and vendor per network; dual-band on ESP32-C5. Ghost ESP runs on many ESP32 boards. APs only.",
-                color = Palette.muted, fontFamily = Mono, fontSize = 13.sp, modifier = Modifier.padding(start = 14.dp, top = 2.dp))
+                style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 14.dp, top = 2.dp))
 
             Spacer(Modifier.height(8.dp))
             DeviceBullet("Cerberus", "serial · AP scan", "ESP32 rig with Wardrive-Go-compatible CLI firmware", accent)
             Text("Custom wardriving rig whose firmware speaks the same serial CLI we drive — plug it in and its scan feeds the same pipeline. APs only.",
-                color = Palette.muted, fontFamily = Mono, fontSize = 13.sp, modifier = Modifier.padding(start = 14.dp, top = 2.dp))
+                style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 14.dp, top = 2.dp))
 
             Spacer(Modifier.height(6.dp))
             Text("The firmware (Marauder or Ghost ESP) is detected automatically over any bridge — native-USB or a CP210x — so just plug in a supported board.",
-                color = Palette.muted, fontFamily = Mono, fontSize = 13.sp, modifier = Modifier.padding(start = 14.dp))
+                style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 14.dp))
 
             Spacer(Modifier.height(14.dp))
-            Text("HASH CAPTURE", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            Text("Hash capture", style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = androidx.compose.material3.MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(4.dp))
             Text("While the adapter runs, Wardrive Go passively harvests WPA key material from the frames it already sees — no deauth, no injection. It grabs PMKIDs (WPA*01) and full 4-way handshakes (WPA*02) and files each in the Field Report under \"# HASH CAPTURES\". Tap one for its card — SSID, BSSID, channel, signal, location and the ready-to-crack hashcat 22000 line — with copy / save / share and a map link to where you caught it.",
-                color = Palette.muted, fontFamily = Mono, fontSize = 14.sp)
+                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
 
             Spacer(Modifier.height(12.dp))
-            Text("CRACK IT · hashcat mode 22000", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            Text("Crack it · hashcat mode 22000", style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = androidx.compose.material3.MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(6.dp))
             CmdBox("Linux / macOS", "hashcat -m 22000 capture.hc22000 wordlist.txt", accent)
             Spacer(Modifier.height(6.dp))
             CmdBox("Windows · PowerShell", ".\\hashcat.exe -m 22000 capture.hc22000 wordlist.txt", accent)
 
             Spacer(Modifier.height(12.dp))
-            Text("CRACK ONLINE", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            Text("Crack online", style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = androidx.compose.material3.MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(4.dp))
             AutoShrinkLink("https://handshakecrack.com/", "handshakecrack.com", accent, maxSize = 20.sp)
 
             Spacer(Modifier.height(8.dp))
-            Text("Only against networks you own or are authorized to test.", color = Palette.muted.copy(alpha = 0.8f), fontFamily = Mono, fontSize = 12.sp)
+            Text("Only against networks you own or are authorized to test.", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
 
 @Composable
-private fun DeviceBullet(chipset: String, driver: String, examples: String, accent: Color) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.Top) {
-        Text("•", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.width(14.dp))
+private fun DeviceBullet(chipset: String, driver: String, examples: String, @Suppress("UNUSED_PARAMETER") accent: Color) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.Top) {
+        Text("•", style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.primary, modifier = Modifier.width(14.dp))
         Column {
-            Text("$chipset  ·  $driver", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            Text(examples, color = Palette.muted, fontFamily = Mono, fontSize = 13.sp)
+            Text("$chipset  ·  $driver", style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
+            Text(examples, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
 
 @Composable
-private fun InfoCard(icon: ImageVector, title: String, accent: Color, body: String) {
-    Row(
-        Modifier.fillMaxWidth().padding(bottom = 12.dp)
-            .border(1.dp, Palette.line, RoundedCornerShape(14.dp))
-            .background(Palette.surface, RoundedCornerShape(14.dp)).padding(14.dp)
-    ) {
-        Box(Modifier.size(40.dp).background(accent.copy(alpha = 0.14f), RoundedCornerShape(11.dp)), contentAlignment = Alignment.Center) {
-            Icon(icon, null, tint = accent, modifier = Modifier.size(22.dp))
-        }
-        Spacer(Modifier.width(12.dp))
-        Column {
-            Text(title, color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            Spacer(Modifier.height(4.dp))
-            Text(body, color = Palette.muted, fontFamily = Mono, fontSize = 14.sp)
+private fun InfoCard(icon: ImageVector, title: String, @Suppress("UNUSED_PARAMETER") accent: Color, body: String) {
+    androidx.compose.material3.Surface(shape = androidx.compose.material3.MaterialTheme.shapes.medium, color = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        Row(Modifier.padding(14.dp)) {
+            Icon(icon, null, tint = androidx.compose.material3.MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+            Spacer(Modifier.width(14.dp))
+            Column {
+                Text(title, style = androidx.compose.material3.MaterialTheme.typography.titleSmall)
+                Spacer(Modifier.height(4.dp))
+                Text(body, style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }
 
 @Composable
-private fun LinkButton(icon: ImageVector, title: String, subtitle: String, accent: Color, deep: Color, filled: Boolean, onClick: () -> Unit) {
-
-    val base = if (filled) Modifier.glassAction(accent, RoundedCornerShape(14.dp))
-               else Modifier.background(Palette.surface, RoundedCornerShape(14.dp))
-                   .border(1.dp, accent.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
-    Row(
-        Modifier.fillMaxWidth().then(base)
-            .clickable { onClick() }.padding(horizontal = 16.dp, vertical = 15.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(Modifier.size(40.dp).background(accent.copy(alpha = 0.16f), RoundedCornerShape(11.dp)), contentAlignment = Alignment.Center) {
-            Icon(icon, null, tint = accent, modifier = Modifier.size(22.dp))
-        }
-        Spacer(Modifier.width(14.dp))
-        Column {
-            Text(title, color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            Text(subtitle, color = Palette.muted, fontFamily = Mono, fontSize = 14.sp)
-        }
-    }
+private fun LinkButton(icon: ImageVector, title: String, subtitle: String, @Suppress("UNUSED_PARAMETER") accent: Color, @Suppress("UNUSED_PARAMETER") deep: Color, @Suppress("UNUSED_PARAMETER") filled: Boolean, onClick: () -> Unit) {
+    com.rocketgod.warble.ui.components.KitNavRow(icon, title, subtitle, onClick,
+        trailing = { Icon(Icons.Filled.KeyboardArrowRight, null) })
 }

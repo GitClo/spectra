@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.GpsFixed
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.ui.draw.clip
 import androidx.compose.material3.Icon
@@ -40,45 +41,21 @@ import java.util.Locale
 fun SignalDetail(
     c: Contact, accent: Color, onLocate: () -> Unit = {},
     canBlock: Boolean = false, blocked: Boolean = false, onBlockToggle: () -> Unit = {},
+    onProfile: (() -> Unit)? = null,
     onBack: () -> Unit
 ) {
-    Column(
-        Modifier
-            .fillMaxSize()
-            .background(Palette.paper)
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp)
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Filled.ArrowBack, "back", tint = Palette.ink, modifier = Modifier.clickable { onBack() })
-            Spacer(Modifier.width(12.dp))
-            Text(com.rocketgod.warble.classify.NotableDevices.displayName(c.name, c.key, c.companyId, c.category, c.maker) ?: "— not advertised",
-                color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+    val title = com.rocketgod.warble.classify.NotableDevices.displayName(c.name, c.key, c.companyId, c.category, c.maker) ?: "Not advertised"
+    com.rocketgod.warble.ui.components.ScrollScreen(title = title, subtitle = "Live · ${c.rssi} dBm", onBack = onBack) {
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            com.rocketgod.warble.ui.components.KitAction("Locate", Icons.Filled.GpsFixed, onLocate, primary = true, modifier = Modifier.weight(1f))
+            if (onProfile != null)
+                com.rocketgod.warble.ui.components.KitAction("History", Icons.Filled.History, onProfile, tonal = true, modifier = Modifier.weight(1f))
         }
-        Spacer(Modifier.height(16.dp))
-
-        Row(
-            Modifier.fillMaxWidth().glassAction(accent)
-                .clickable { onLocate() }.padding(vertical = 14.dp),
-            horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(Icons.Filled.GpsFixed, null, tint = accent, modifier = Modifier.size(20.dp))
-            Spacer(Modifier.width(10.dp))
-            Text("LOCATE", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-        }
-
         if (canBlock) {
-            Spacer(Modifier.height(10.dp))
-            Row(
-                Modifier.fillMaxWidth().glassAction(if (blocked) Palette.muted else accent)
-                    .clickable { onBlockToggle() }.padding(vertical = 14.dp),
-                horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Filled.Shield, null, tint = if (blocked) Palette.muted else accent, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(10.dp))
-                Text(if (blocked) "EXCLUDED FROM UPLOADS ✓" else "EXCLUDE FROM UPLOADS",
-                    color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            }
+            Spacer(Modifier.height(8.dp))
+            com.rocketgod.warble.ui.components.KitAction(
+                if (blocked) "Excluded from uploads ✓" else "Exclude from uploads", Icons.Filled.Shield, onBlockToggle)
         }
 
         val threat = com.rocketgod.warble.classify.NotableDevices.threat(c.name, c.key, c.companyId, c.category)
@@ -93,6 +70,19 @@ fun SignalDetail(
         Field("Manufacturer", c.maker ?: "—")
         Field("Inferred type", c.category)
         Field("Identifier", c.key)
+        c.macKind?.let { k -> runCatching { com.rocketgod.warble.domain.model.MacKind.valueOf(k).label }.getOrNull()?.let { Field("Address type", it) } }
+        c.model?.let { Field("Model", it) }
+
+        if (c.fingerprint != null || c.profileId != c.key) {
+            Section("FINGERPRINT", accent)
+            if (c.profileId != c.key) Field("Linked to", c.profileId)
+            c.linkConfidence?.takeIf { c.profileId != c.key }?.let { Field("Link confidence", "${(it * 100).toInt()} %") }
+            c.fingerprint?.let { Field("Signature", it) }
+            c.fingerprintSummary?.let { Field("Advertises", it) }
+            c.advIntervalMs?.let { Field("Adv. interval", "≈ $it ms") }
+            c.txPower?.let { Field("TX power", "$it dBm") }
+        }
+        c.security?.let { Field("Security", com.rocketgod.warble.domain.security.WifiSecurity.fromKey(it).label) }
 
         Section("SIGNAL", accent)
         Field("Current", "${c.rssi} dBm")
@@ -115,35 +105,25 @@ fun SignalDetail(
         if (c.serviceUuids.isNotEmpty()) {
             Section("SERVICE UUIDS", accent)
             c.serviceUuids.forEach { u ->
-                Text(u, color = Palette.ink, fontFamily = Mono, fontSize = 12.sp,
+                Text(u, style = com.rocketgod.warble.ui.theme.CodeStyle, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp))
             }
         }
 
         Spacer(Modifier.height(20.dp))
         Text(
-            "The identifier is an OS-assigned value that rotates for privacy — it can't be used to track anyone.",
-            color = Palette.muted, fontFamily = Mono, fontSize = 11.sp
+            "Many devices randomize their address for privacy; see Address type above.",
+            style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+            color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Spacer(Modifier.height(24.dp))
     }
 }
 
 @Composable
-private fun Section(title: String, accent: Color) {
-    Spacer(Modifier.height(16.dp))
-    Text(title, color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-    Box(Modifier.fillMaxWidth().height(1.dp).background(Palette.line))
-    Spacer(Modifier.height(6.dp))
-}
+private fun Section(title: String, @Suppress("UNUSED_PARAMETER") accent: Color) = com.rocketgod.warble.ui.components.KitSection(title)
 
 @Composable
-private fun Field(label: String, value: String) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-        Text(label, color = Palette.muted, fontFamily = Mono, fontSize = 13.sp, modifier = Modifier.width(120.dp))
-        Text(value, color = Palette.ink, fontFamily = Mono, fontSize = 13.sp, modifier = Modifier.weight(1f))
-    }
-}
+private fun Field(label: String, value: String) = com.rocketgod.warble.ui.components.KitField(label, value)
 
 private fun ts(millis: Long): String =
     SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date(millis))

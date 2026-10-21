@@ -1,5 +1,6 @@
 package com.rocketgod.warble.ui
 
+import androidx.compose.material3.SegmentedButton
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -86,8 +87,9 @@ private class Spark(val ang: Float, val spd: Float, val ph: Float, val r: Float)
 
 @Composable
 private fun frameTime(): Float {
-    val t by produceState(0f) {
-        while (true) withInfiniteAnimationFrameNanos { value = it / 1_000_000_000f }
+    var t by androidx.compose.runtime.remember() { androidx.compose.runtime.mutableStateOf(0f) }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        while (true) withInfiniteAnimationFrameNanos { t = it / 1_000_000_000f }
     }
     return t
 }
@@ -191,9 +193,9 @@ private fun PodiumSlot(rank: Int, name: String, score: String, monogram: String,
             AnimatedTrophy(rank, accent, champion, ghost)
         }
         Spacer(Modifier.height(4.dp))
-        Text(name, color = if (ghost) Palette.muted else Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold,
+        Text(name, color = if (ghost) Palette.muted else Palette.ink, fontFamily = AppFont, fontWeight = FontWeight.Bold,
             fontSize = 12.sp, maxLines = 1)
-        Text(score, color = if (ghost) Palette.muted else accent, fontFamily = Mono, fontWeight = FontWeight.Bold,
+        Text(score, color = if (ghost) Palette.muted else accent, fontFamily = AppFont, fontWeight = FontWeight.Bold,
             fontSize = (if (champion) 17 else 13).sp, maxLines = 1)
         Spacer(Modifier.height(6.dp))
         Box(
@@ -201,13 +203,14 @@ private fun PodiumSlot(rank: Int, name: String, score: String, monogram: String,
                 .background(Brush.verticalGradient(listOf(m.copy(alpha = 0.45f), m.copy(alpha = 0.08f))), RoundedCornerShape(5.dp))
                 .border(1.dp, m.copy(alpha = 0.55f), RoundedCornerShape(5.dp)),
             contentAlignment = Alignment.TopCenter
-        ) { Text("$rank", color = m, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 30.sp, modifier = Modifier.padding(top = 8.dp)) }
+        ) { Text("$rank", color = m, fontFamily = AppFont, fontWeight = FontWeight.Bold, fontSize = 30.sp, modifier = Modifier.padding(top = 8.dp)) }
     }
 }
 
 private enum class Tab(val label: String) { USERS("USERS"), TEAMS("TEAMS"), YOU("YOU") }
 private enum class Source(val label: String) { WIGLE("WiGLE"), WDGW("WDGWars") }
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun LeaderboardScreen(
     stats: Stats,
@@ -243,29 +246,35 @@ fun LeaderboardScreen(
     val hasCreds = wigleName.isNotBlank() && wigleToken.isNotBlank()
     val hasWdgw = wdgwKey.isNotBlank()
 
-    val standings by produceState<WigleStats.Standings?>(initialValue = null, sort) {
-        value = null
-        value = withContext(Dispatchers.IO) { WigleStats.standings(sort, 0, 100, wigleName, wigleToken) }
+    var standings by androidx.compose.runtime.remember(sort) { androidx.compose.runtime.mutableStateOf<WigleStats.Standings?>(null) }
+    androidx.compose.runtime.LaunchedEffect(sort) {
+        standings = null
+        standings = withContext(Dispatchers.IO) { WigleStats.standings(sort, 0, 100, wigleName, wigleToken) }
     }
-    val groups by produceState<WigleStats.Groups?>(initialValue = null) {
-        value = withContext(Dispatchers.IO) { WigleStats.groups(wigleName, wigleToken) }
+    var groups by androidx.compose.runtime.remember() { androidx.compose.runtime.mutableStateOf<WigleStats.Groups?>(null) }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        groups = withContext(Dispatchers.IO) { WigleStats.groups(wigleName, wigleToken) }
     }
-    val personal by produceState<WigleStats.Personal?>(initialValue = null) {
-        if (hasCreds) value = withContext(Dispatchers.IO) { WigleStats.user(wigleName, wigleToken) }
+    var personal by androidx.compose.runtime.remember() { androidx.compose.runtime.mutableStateOf<WigleStats.Personal?>(null) }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        if (hasCreds) personal = withContext(Dispatchers.IO) { WigleStats.user(wigleName, wigleToken) }
     }
 
-    val race by produceState<List<WigleStats.WUser>>(initialValue = emptyList(), personal?.rank) {
+    var race by androidx.compose.runtime.remember(personal?.rank) { androidx.compose.runtime.mutableStateOf<List<WigleStats.WUser>>(emptyList()) }
+    androidx.compose.runtime.LaunchedEffect(personal?.rank) {
         val p = personal
-        value = if (p != null && p.rank > 0)
+        race = if (p != null && p.rank > 0)
             withContext(Dispatchers.IO) { WigleStats.raceWindow(p.rank, p.name, 5, wigleName, wigleToken) }
         else emptyList()
     }
 
-    val wdgwBoard by produceState<WdgwStats.Board?>(initialValue = null, wdgwKey) {
-        value = if (hasWdgw) withContext(Dispatchers.IO) { WdgwStats.leaderboard(wdgwKey) } else null
+    var wdgwBoard by androidx.compose.runtime.remember(wdgwKey) { androidx.compose.runtime.mutableStateOf<WdgwStats.Board?>(null) }
+    androidx.compose.runtime.LaunchedEffect(wdgwKey) {
+        wdgwBoard = if (hasWdgw) withContext(Dispatchers.IO) { WdgwStats.leaderboard(wdgwKey) } else null
     }
-    val wdgwMe by produceState<WdgwStats.Me?>(initialValue = null, wdgwKey) {
-        value = if (hasWdgw) withContext(Dispatchers.IO) { WdgwStats.me(wdgwKey) } else null
+    var wdgwMe by androidx.compose.runtime.remember(wdgwKey) { androidx.compose.runtime.mutableStateOf<WdgwStats.Me?>(null) }
+    androidx.compose.runtime.LaunchedEffect(wdgwKey) {
+        wdgwMe = if (hasWdgw) withContext(Dispatchers.IO) { WdgwStats.me(wdgwKey) } else null
     }
 
     LaunchedEffect(wdgwMe?.name) { onWdgwUsername(wdgwMe?.name) }
@@ -274,29 +283,24 @@ fun LeaderboardScreen(
         LeaderboardBackdrop(accent, Modifier.fillMaxSize())
         Column(Modifier.fillMaxSize()) {
 
-            Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    Modifier.size(38.dp).background(Palette.surface, RoundedCornerShape(8.dp)).border(1.dp, Palette.line, RoundedCornerShape(8.dp)).clickable { popOne() },
-                    contentAlignment = Alignment.Center
-                ) { Icon(Icons.Filled.ArrowBack, "back", tint = Palette.ink, modifier = Modifier.size(18.dp)) }
-                Spacer(Modifier.width(14.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("${source.label.uppercase()} · LIVE STANDINGS", color = Palette.muted, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                    Text("LEADERBOARD", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 24.sp)
+            com.rocketgod.warble.ui.components.BackTopBar("Leaderboards", onBack = { popOne() }, subtitle = "${source.label} · live standings")
+            androidx.compose.material3.SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                listOf(Source.WIGLE to (Icons.Filled.Public to "WiGLE"), Source.WDGW to (Icons.Filled.Bolt to "WDGWars")).forEachIndexed { i, (src, v) ->
+                    SegmentedButton(
+                        selected = source == src, onClick = { source = src },
+                        shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(i, 2),
+                        icon = { Icon(v.first, null, Modifier.size(18.dp)) }
+                    ) { Text(v.second) }
                 }
-
             }
-
-            Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TabPill(Icons.Filled.Public, "WiGLE", source == Source.WIGLE, accent, Modifier.weight(1f)) { source = Source.WIGLE }
-                TabPill(Icons.Filled.Bolt, "WDGWars", source == Source.WDGW, accent, Modifier.weight(1f)) { source = Source.WDGW }
-            }
-            Spacer(Modifier.height(10.dp))
-
-            Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TabPill(Icons.Filled.Person, "USERS", tab == Tab.USERS, accent, Modifier.weight(1f)) { tab = Tab.USERS }
-                TabPill(Icons.Filled.Group, if (source == Source.WDGW) "GANGS" else "TEAMS", tab == Tab.TEAMS, accent, Modifier.weight(1f)) { tab = Tab.TEAMS }
-                TabPill(Icons.Filled.EmojiEvents, "YOU", tab == Tab.YOU, accent, Modifier.weight(1f)) { tab = Tab.YOU }
+            Spacer(Modifier.height(4.dp))
+            androidx.compose.material3.PrimaryTabRow(selectedTabIndex = tab.ordinal, containerColor = androidx.compose.ui.graphics.Color.Transparent) {
+                androidx.compose.material3.Tab(selected = tab == Tab.USERS, onClick = { tab = Tab.USERS },
+                    text = { Text("Users") }, icon = { Icon(Icons.Filled.Person, null) })
+                androidx.compose.material3.Tab(selected = tab == Tab.TEAMS, onClick = { tab = Tab.TEAMS },
+                    text = { Text(if (source == Source.WDGW) "Gangs" else "Teams") }, icon = { Icon(Icons.Filled.Group, null) })
+                androidx.compose.material3.Tab(selected = tab == Tab.YOU, onClick = { tab = Tab.YOU },
+                    text = { Text("You") }, icon = { Icon(Icons.Filled.EmojiEvents, null) })
             }
             Spacer(Modifier.height(12.dp))
 
@@ -331,14 +335,14 @@ private fun ConnectPrompt(title: String, body: String, accent: Color, onSettings
             .background(Palette.surface.copy(alpha = 0.85f), RoundedCornerShape(14.dp))
             .clickable { onSettings() }.padding(16.dp)
     ) {
-        Text(title, color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+        Text(title, style = androidx.compose.material3.MaterialTheme.typography.titleMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
         Spacer(Modifier.height(6.dp))
-        Text(body, color = Palette.muted, fontFamily = Mono, fontSize = 12.sp)
+        Text(body, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(12.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Filled.Settings, null, tint = accent, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
-            Text("Open API settings", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            Text("Open API settings", style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = accent)
         }
     }
 }
@@ -367,12 +371,12 @@ private fun WdgwUsersTab(board: WdgwStats.Board?, me: WdgwStats.Me?, hasWdgw: Bo
     val unit = when (view) {
         WView.TODAY -> "captures today"; WView.WEEK -> "captures this week"; WView.ALLTIME -> "total captures"; WView.CELLS -> "cell towers"
     }
-    if (list.isEmpty()) { Text("No data for this board yet.", color = Palette.muted, fontFamily = Mono, fontSize = 12.sp); return }
+    if (list.isEmpty()) { Text("No data for this board yet.", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant); return }
 
     val myName = me?.name ?: ""
     WdgwPodium(list.map { it.name to it.score }, accent)
     Spacer(Modifier.height(8.dp))
-    Text("wdgwars.pl · $unit${asOf(board.asOf)}", color = Palette.muted, fontFamily = Mono, fontSize = 11.sp)
+    Text("wdgwars.pl · $unit${asOf(board.asOf)}", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
     Spacer(Modifier.height(16.dp))
 
     if (me != null && myName.isNotBlank() && view != WView.CELLS && list.none { it.name.equals(myName, true) }) {
@@ -399,10 +403,10 @@ private fun WdgwGangsTab(board: WdgwStats.Board?, hasWdgw: Boolean, accent: Colo
     if (board == null) { Loading(accent); return }
     if (!board.ok) { ErrorBox(board.message.ifBlank { "No WDGWars leaderboard data." }, accent); return }
     val gangs = board.gangs
-    if (gangs.isEmpty()) { Text("No gang data.", color = Palette.muted, fontFamily = Mono, fontSize = 12.sp); return }
+    if (gangs.isEmpty()) { Text("No gang data.", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant); return }
     WdgwPodium(gangs.map { it.name to it.apCount }, accent)
     Spacer(Modifier.height(8.dp))
-    Text("wdgwars.pl · gangs · APs discovered${asOf(board.asOf)}", color = Palette.muted, fontFamily = Mono, fontSize = 11.sp)
+    Text("wdgwars.pl · gangs · APs discovered${asOf(board.asOf)}", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
     Spacer(Modifier.height(16.dp))
     val maxVal = (gangs.maxOfOrNull { it.apCount } ?: 1L).coerceAtLeast(1L)
     gangs.drop(3).forEach { g ->
@@ -426,28 +430,28 @@ private fun WdgwYouTab(board: WdgwStats.Board?, me: WdgwStats.Me?, hasWdgw: Bool
             .background(Brush.verticalGradient(listOf(accent.copy(alpha = 0.18f), Palette.surface)), RoundedCornerShape(18.dp))
             .padding(18.dp)
     ) {
-        Text(me.name.ifBlank { "You" }, color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold,
+        Text(me.name.ifBlank { "You" }, color = Palette.ink, fontFamily = AppFont, fontWeight = FontWeight.Bold,
             fontSize = 34.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             modifier = Modifier.fillMaxWidth())
-        Text("WDGWars · all-time", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+        Text("WDGWars · all-time", style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = accent)
         Spacer(Modifier.height(16.dp))
         Row(Modifier.fillMaxWidth()) {
             Column(Modifier.weight(1f)) {
                 AutoSizeText(if (myRank != null) "#${fmtGrouped(myRank.toLong())}" else "—",
                     gold, maxSize = 46.sp, minSize = 18.sp, modifier = Modifier.fillMaxWidth())
-                Text("YOUR RANK", color = Palette.muted, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text("YOUR RANK", style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 AutoSizeText(if (gangRow != null) "#${fmtGrouped(gangRow.rank.toLong())}" else "—",
                     accent, maxSize = 46.sp, minSize = 18.sp, modifier = Modifier.fillMaxWidth())
-                Text("GANG RANK", color = Palette.muted, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text("GANG RANK", style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         if (myRank == null) {
             Spacer(Modifier.height(8.dp))
             Text("Outside the top $topN — WDGWars only ranks the top $topN, so keep climbing to earn a number.",
-                color = Palette.muted, fontFamily = Mono, fontSize = 11.sp)
+                style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Spacer(Modifier.height(16.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -457,15 +461,15 @@ private fun WdgwYouTab(board: WdgwStats.Board?, me: WdgwStats.Me?, hasWdgw: Bool
         }
         Spacer(Modifier.height(14.dp))
         Text("${fmtGrouped(me.recentToday)} today · ${fmtGrouped(me.recent7d)} this week",
-            color = Palette.muted, fontFamily = Mono, fontSize = 11.sp)
+            style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
     }
     Spacer(Modifier.height(22.dp))
 
     if (gangRow != null) {
-        Text("YOUR GANG", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        Text("YOUR GANG", style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = accent)
         Spacer(Modifier.height(4.dp))
         Text(me.gangRole?.let { "you are ${it} · APs discovered" } ?: "APs discovered",
-            color = Palette.muted, fontFamily = Mono, fontSize = 11.sp)
+            style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(10.dp))
         val maxVal = (board?.gangs?.maxOfOrNull { it.apCount } ?: gangRow.apCount).coerceAtLeast(1L)
         RankRow(gangRow.rank, gangRow.name, gangRow.apCount, maxVal, true, accent,
@@ -473,7 +477,7 @@ private fun WdgwYouTab(board: WdgwStats.Board?, me: WdgwStats.Me?, hasWdgw: Bool
         Spacer(Modifier.height(22.dp))
     }
 
-    Text("THIS ACCOUNT", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+    Text("THIS ACCOUNT", style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = accent)
     Spacer(Modifier.height(10.dp))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         BigStat("Reinforced", me.reinforceTotal, accent)
@@ -542,7 +546,7 @@ private fun UsersTab(
     }
     Spacer(Modifier.height(8.dp))
     Text("${Leaderboard.fmt(standings.totalUsers)} wardrivers ranked · $unit · excl. anonymous",
-        color = Palette.muted, fontFamily = Mono, fontSize = 11.sp)
+        style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
     Spacer(Modifier.height(16.dp))
 
     if (personal != null && myName.isNotBlank() && users.none { it.self || it.name.equals(myName, true) }) {
@@ -589,7 +593,7 @@ private fun TeamsTab(groups: WigleStats.Groups?, accent: Color, onSelectGroup: (
             top.getOrNull(2)?.let { monogram(it.name) } ?: "?", 70, champion = false, ghost = top.size < 3, accent = accent, modifier = Modifier.weight(1f).then(tap(top.getOrNull(2))))
     }
     Spacer(Modifier.height(8.dp))
-    Text("${Leaderboard.fmt(list.size.toLong())} teams · tap a team for member ranking", color = Palette.muted, fontFamily = Mono, fontSize = 11.sp)
+    Text("${Leaderboard.fmt(list.size.toLong())} teams · tap a team for member ranking", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
     Spacer(Modifier.height(16.dp))
 
     val maxVal = (list.maxOfOrNull { it.discovered } ?: 1L).coerceAtLeast(1L)
@@ -601,17 +605,18 @@ private fun TeamsTab(groups: WigleStats.Groups?, accent: Color, onSelectGroup: (
 
 @Composable
 private fun TeamMembersTab(group: WigleStats.WGroup, myName: String, wigleName: String, wigleToken: String, accent: Color, onUser: (WigleStats.UserDetail) -> Unit, onBack: () -> Unit) {
-    val members by produceState<WigleStats.GroupMembers?>(initialValue = null, group.id) {
-        value = withContext(Dispatchers.IO) { WigleStats.groupMembers(group.id, myName, wigleName, wigleToken) }
+    var members by androidx.compose.runtime.remember(group.id) { androidx.compose.runtime.mutableStateOf<WigleStats.GroupMembers?>(null) }
+    androidx.compose.runtime.LaunchedEffect(group.id) {
+        members = withContext(Dispatchers.IO) { WigleStats.groupMembers(group.id, myName, wigleName, wigleToken) }
     }
     Spacer(Modifier.height(4.dp))
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { onBack() }.padding(vertical = 6.dp)) {
         Icon(Icons.Filled.ArrowBack, "back to teams", tint = accent, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(8.dp))
-        Text(group.name, color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 16.sp, maxLines = 1)
+        Text(group.name, style = androidx.compose.material3.MaterialTheme.typography.titleMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface, maxLines = 1)
     }
     Text("${Leaderboard.fmt(group.members)} members · owner ${group.owner} · ranked by Wi-Fi discovered",
-        color = Palette.muted, fontFamily = Mono, fontSize = 11.sp)
+        style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
     Spacer(Modifier.height(12.dp))
     val m = members
     when {
@@ -638,11 +643,11 @@ private fun TeamMemberRow(mem: WigleStats.GroupMember, maxVal: Long, accent: Col
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("${mem.rank}", color = if (mine) accent else Palette.muted, fontFamily = Mono, fontWeight = FontWeight.Bold,
+        Text("${mem.rank}", color = if (mine) accent else Palette.muted, fontFamily = AppFont, fontWeight = FontWeight.Bold,
             fontSize = 14.sp, modifier = Modifier.width(34.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(mem.name, color = if (mine) accent else Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold,
+                Text(mem.name, color = if (mine) accent else Palette.ink, fontFamily = AppFont, fontWeight = FontWeight.Bold,
                     fontSize = 14.sp, maxLines = 1)
                 if (mine) {
                     Spacer(Modifier.width(6.dp))
@@ -657,12 +662,12 @@ private fun TeamMemberRow(mem: WigleStats.GroupMember, maxVal: Long, accent: Col
             Spacer(Modifier.height(5.dp))
 
             Text("${fmtGrouped(mem.discovered)} Wi-Fi discovered", color = if (mine) accent else Palette.ink,
-                fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1)
+                fontFamily = AppFont, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1)
             Text("total ${fmtGrouped(mem.total)} · this month ${fmtGrouped(mem.monthCount)} · last month ${fmtGrouped(mem.prevMonthCount)}",
-                color = Palette.muted, fontFamily = Mono, fontSize = 10.sp, maxLines = 1)
+                style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
             if (mem.firstSeen.isNotBlank() || mem.lastSeen.isNotBlank()) {
                 Text("active ${mem.firstSeen.ifBlank { "?" }} → ${mem.lastSeen.ifBlank { "?" }}",
-                    color = Palette.muted.copy(alpha = 0.8f), fontFamily = Mono, fontSize = 10.sp, maxLines = 1)
+                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = Palette.muted.copy(alpha = 0.8f), maxLines = 1)
             }
         }
         Spacer(Modifier.width(6.dp))
@@ -677,7 +682,7 @@ private fun UserDetailScreen(d: WigleStats.UserDetail, accent: Color, onBack: ()
         modifier = Modifier.fillMaxWidth().clickable { onBack() }.padding(vertical = 6.dp)) {
         Icon(Icons.Filled.ArrowBack, "back", tint = accent, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(8.dp))
-        Text("Back", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+        Text("Back", style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = accent)
     }
     Spacer(Modifier.height(6.dp))
 
@@ -687,33 +692,33 @@ private fun UserDetailScreen(d: WigleStats.UserDetail, accent: Color, onBack: ()
             .background(Brush.verticalGradient(listOf(accent.copy(alpha = 0.18f), Palette.surface)), RoundedCornerShape(18.dp))
             .padding(18.dp)
     ) {
-        Text(d.name, color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 30.sp,
+        Text(d.name, color = Palette.ink, fontFamily = AppFont, fontWeight = FontWeight.Bold, fontSize = 30.sp,
             maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth())
         Text(if (d.self) "WiGLE · you · ${d.context}" else "WiGLE · ${d.context}",
-            color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = accent)
         Spacer(Modifier.height(16.dp))
         if (d.rank > 0 || d.monthRank > 0) {
             Row(Modifier.fillMaxWidth()) {
                 Column(Modifier.weight(1f)) {
                     RankWithDelta(if (d.rank > 0) "#${fmtGrouped(d.rank)}" else "—", d.rankDelta, gold)
-                    Text("ALL-TIME", color = Palette.muted, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text("ALL-TIME", style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Column(Modifier.weight(1f)) {
                     RankWithDelta(if (d.monthRank > 0) "#${fmtGrouped(d.monthRank)}" else "—", d.monthRankDelta, accent)
-                    Text("THIS MONTH", color = Palette.muted, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text("THIS MONTH", style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         } else if (d.teamRank > 0) {
-            Text("#${d.teamRank}", color = gold, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 40.sp)
-            Text("RANK IN ${d.context.uppercase()}", color = Palette.muted, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1)
+            Text("#${d.teamRank}", color = gold, fontFamily = AppFont, fontWeight = FontWeight.Bold, fontSize = 40.sp)
+            Text("RANK IN ${d.context.uppercase()}", style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
         }
         Spacer(Modifier.height(16.dp))
-        Text("${fmtGrouped(d.wifiGps)} Wi-Fi discovered", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+        Text("${fmtGrouped(d.wifiGps)} Wi-Fi discovered", style = androidx.compose.material3.MaterialTheme.typography.titleLarge, color = accent)
         val wifiSub = buildString {
             if (d.wifiTotal > 0) append("total ${fmtGrouped(d.wifiTotal)}")
             if (d.wifiPercent > 0) { if (isNotEmpty()) append(" · "); append("${pct(d.wifiPercent)} of all WiGLE") }
         }
-        if (wifiSub.isNotBlank()) Text(wifiSub, color = Palette.muted, fontFamily = Mono, fontSize = 11.sp)
+        if (wifiSub.isNotBlank()) Text(wifiSub, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
         if (d.bt > 0 || d.cell > 0 || d.totalWiFiLocations > 0) {
             Spacer(Modifier.height(14.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -725,14 +730,14 @@ private fun UserDetailScreen(d: WigleStats.UserDetail, accent: Color, onBack: ()
     }
     Spacer(Modifier.height(18.dp))
 
-    Text("ACTIVITY", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+    Text("ACTIVITY", style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = accent)
     Spacer(Modifier.height(6.dp))
     DetailRow("This month", fmtGrouped(d.monthCount), accent)
     DetailRow("Last month", fmtGrouped(d.prevMonthCount), accent)
     if (d.monthCount > 0 || d.prevMonthCount > 0) {
         val md = d.monthDelta
         Text((if (md >= 0) "▲ ${fmtGrouped(md)}" else "▼ ${fmtGrouped(-md)}") + " vs last month",
-            color = if (md >= 0) raceUp else raceDown, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 11.sp,
+            color = if (md >= 0) raceUp else raceDown, fontFamily = AppFont, fontWeight = FontWeight.Bold, fontSize = 11.sp,
             modifier = Modifier.padding(top = 2.dp, bottom = 4.dp))
     }
     if (d.btTotal > 0) DetailRow("Bluetooth (incl. no-GPS)", fmtGrouped(d.btTotal), accent)
@@ -740,7 +745,7 @@ private fun UserDetailScreen(d: WigleStats.UserDetail, accent: Color, onBack: ()
     if (d.firstSeen.isNotBlank()) DetailRow("First upload", d.firstSeen, accent)
     if (d.lastSeen.isNotBlank()) DetailRow("Last upload", d.lastSeen, accent)
     Spacer(Modifier.height(10.dp))
-    Text("Live from WiGLE · tap Back to return", color = Palette.muted, fontFamily = Mono, fontSize = 10.sp)
+    Text("Live from WiGLE · tap Back to return", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 @Composable
@@ -751,7 +756,7 @@ private fun RankWithDelta(text: String, delta: Long, color: Color) {
             val up = delta > 0
             Spacer(Modifier.width(6.dp))
             Text((if (up) "▲" else "▼") + fmtGrouped(kotlin.math.abs(delta)),
-                color = if (up) raceUp else raceDown, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = if (up) raceUp else raceDown)
         }
     }
 }
@@ -759,8 +764,8 @@ private fun RankWithDelta(text: String, delta: Long, color: Color) {
 @Composable
 private fun DetailRow(label: String, value: String, accent: Color) {
     Row(Modifier.fillMaxWidth().padding(vertical = 5.dp)) {
-        Text(label, color = Palette.ink, fontFamily = Mono, fontSize = 13.sp, modifier = Modifier.weight(1f))
-        Text(value, color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+        Text(label, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+        Text(value, style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = accent)
     }
 }
 
@@ -779,25 +784,25 @@ private fun YouTab(stats: Stats, personal: WigleStats.Personal?, race: List<Wigl
         Spacer(Modifier.height(22.dp))
     }
 
-    Text("THIS DEVICE", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+    Text("THIS DEVICE", style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = accent)
     Spacer(Modifier.height(8.dp))
     Leaderboard.records(stats).forEach { r ->
         Row(Modifier.fillMaxWidth().padding(vertical = 5.dp)) {
-            Text(r.label, color = Palette.ink, fontFamily = Mono, fontSize = 13.sp, modifier = Modifier.weight(1f))
-            Text(r.value, color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            Text(r.label, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+            Text(r.value, style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = accent)
         }
     }
     Spacer(Modifier.height(18.dp))
 
     Text("THIS RUN  ${Leaderboard.runUnlockedCount(stats)}/${Leaderboard.runAchievements.size}",
-        color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-    Text("since your last WiGLE send — resets when you send to WiGLE", color = Palette.muted, fontFamily = Mono, fontSize = 11.sp)
+        style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = accent)
+    Text("since your last WiGLE send — resets when you send to WiGLE", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
     Spacer(Modifier.height(8.dp))
     Leaderboard.runAchievements.forEach { a -> AchievementRow(a, stats, accent, gold) }
     Spacer(Modifier.height(18.dp))
 
     Text("ACHIEVEMENTS  ${Leaderboard.unlockedCount(stats)}/${Leaderboard.achievements.size}",
-        color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+        style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = accent)
     Spacer(Modifier.height(8.dp))
     Leaderboard.achievements.forEach { a -> AchievementRow(a, stats, accent, gold) }
 }
@@ -815,8 +820,8 @@ private fun AchievementRow(a: com.rocketgod.warble.core.Achievement, stats: Stat
             tint = if (got) gold else Palette.muted, modifier = Modifier.width(24.dp))
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
-            Text(a.title, color = if (got) Palette.ink else Palette.muted, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            Text(a.detail, color = Palette.muted, fontFamily = Mono, fontSize = 11.sp)
+            Text(a.title, style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = if (got) Palette.ink else Palette.muted)
+            Text(a.detail, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
             if (!got) {
                 Spacer(Modifier.height(4.dp))
                 Box(Modifier.fillMaxWidth().height(4.dp).background(Palette.panel, RoundedCornerShape(2.dp))) {
@@ -840,11 +845,11 @@ private fun HeroCard(p: WigleStats.Personal, accent: Color) {
     ) {
 
         Text(
-            p.name.ifBlank { "You" }, color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold,
+            p.name.ifBlank { "You" }, color = Palette.ink, fontFamily = AppFont, fontWeight = FontWeight.Bold,
             fontSize = 34.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             modifier = Modifier.fillMaxWidth()
         )
-        Text("WiGLE · all-time", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+        Text("WiGLE · all-time", style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = accent)
         Spacer(Modifier.height(16.dp))
 
         Row(Modifier.fillMaxWidth()) {
@@ -856,15 +861,15 @@ private fun HeroCard(p: WigleStats.Personal, accent: Color) {
                         val up = d > 0
                         Spacer(Modifier.width(6.dp))
                         Text((if (up) "▲" else "▼") + fmtGrouped(kotlin.math.abs(d)),
-                            color = if (up) raceUp else raceDown, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = if (up) raceUp else raceDown)
                     }
                 }
-                Text("ALL-TIME", color = Palette.muted, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text("ALL-TIME", style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 AutoSizeText("#${fmtGrouped(p.monthRank)}", accent, maxSize = 46.sp, minSize = 18.sp, modifier = Modifier.fillMaxWidth())
-                Text("THIS MONTH", color = Palette.muted, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text("THIS MONTH", style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         Spacer(Modifier.height(16.dp))
@@ -876,7 +881,7 @@ private fun HeroCard(p: WigleStats.Personal, accent: Color) {
         if (p.totalWiFiLocations > 0) {
             Spacer(Modifier.height(14.dp))
             Text("${fmtGrouped(p.totalWiFiLocations)} total Wi-Fi observations logged",
-                color = Palette.muted, fontFamily = Mono, fontSize = 11.sp, maxLines = 1)
+                style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
         }
     }
 }
@@ -885,16 +890,16 @@ private fun HeroCard(p: WigleStats.Personal, accent: Color) {
 private fun BigStat(label: String, value: Long, accent: Color, modifier: Modifier = Modifier) {
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         AutoSizeText(fmtGrouped(value), accent, maxSize = 24.sp, minSize = 11.sp, modifier = Modifier.fillMaxWidth())
-        Text(label, color = Palette.muted, fontFamily = Mono, fontSize = 12.sp)
+        Text(label, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
 @Composable
 private fun RacePanel(rows: List<WigleStats.WUser>, accent: Color, onUser: (WigleStats.UserDetail) -> Unit) {
     if (rows.isEmpty()) return
-    Text("THE RACE", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+    Text("THE RACE", style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = accent)
     Spacer(Modifier.height(4.dp))
-    Text("Wi-Fi discovered · you vs the five above and below · tap a rival", color = Palette.muted, fontFamily = Mono, fontSize = 11.sp)
+    Text("Wi-Fi discovered · you vs the five above and below · tap a rival", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
     Spacer(Modifier.height(10.dp))
     val maxVal = (rows.maxOfOrNull { it.wifiGps } ?: 1L).coerceAtLeast(1L)
     Column { rows.forEach { u -> RaceRow(u, maxVal, accent) { if (!u.self) onUser(WigleStats.detailFromUser(u)) } } }
@@ -924,7 +929,7 @@ private fun RaceRow(u: WigleStats.WUser, maxVal: Long, accent: Color, onClick: (
             maxSize = if (mine) 15.sp else 13.sp, minSize = 9.sp, modifier = Modifier.width(58.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(if (mine) "YOU" else u.name, color = if (mine) accent else Palette.ink, fontFamily = Mono,
+                Text(if (mine) "YOU" else u.name, color = if (mine) accent else Palette.ink, fontFamily = AppFont,
                     fontWeight = FontWeight.Bold, fontSize = if (mine) 15.sp else 13.sp, maxLines = 1)
                 if (mine) {
                     Spacer(Modifier.width(6.dp))
@@ -939,7 +944,7 @@ private fun RaceRow(u: WigleStats.WUser, maxVal: Long, accent: Color, onClick: (
         }
         Spacer(Modifier.width(10.dp))
 
-        Text(fmtGrouped(u.wifiGps), color = if (mine) accent else Palette.ink, fontFamily = Mono,
+        Text(fmtGrouped(u.wifiGps), color = if (mine) accent else Palette.ink, fontFamily = AppFont,
             fontWeight = FontWeight.Bold, fontSize = if (mine) 14.sp else 12.sp)
     }
 }
@@ -954,20 +959,20 @@ private fun RankRow(rank: Int, name: String, value: Long, maxVal: Long, mine: Bo
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("$rank", color = Palette.muted, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+        Text("$rank", style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.width(34.dp))
         Column(Modifier.weight(1f)) {
-            Text(name, color = if (mine) accent else Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
+            Text(name, style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = if (mine) accent else Palette.ink, maxLines = 1)
             Spacer(Modifier.height(3.dp))
             Box(Modifier.fillMaxWidth().height(5.dp).background(Palette.panel, RoundedCornerShape(3.dp))) {
                 Box(Modifier.fillMaxWidth((value.toFloat() / maxVal).coerceIn(0.02f, 1f)).height(5.dp)
                     .background(accent, RoundedCornerShape(3.dp)))
             }
 
-            Text(fmtGrouped(value), color = if (mine) accent else Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1)
+            Text(fmtGrouped(value), style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = if (mine) accent else Palette.ink, maxLines = 1)
             if (sub != null) {
                 Spacer(Modifier.height(2.dp))
-                Text(sub, color = Palette.muted, fontFamily = Mono, fontSize = 10.sp, maxLines = 1)
+                Text(sub, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
             }
         }
         if (onClick != null) {
@@ -988,9 +993,9 @@ private fun YouChip(rank: Long, name: String, value: String, accent: Color) {
     ) {
         Icon(Icons.Filled.Bolt, null, tint = accent, modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(8.dp))
-        Text("YOU · #${fmtGrouped(rank)}", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+        Text("YOU · #${fmtGrouped(rank)}", style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = accent,
             modifier = Modifier.weight(1f))
-        Text("$name  $value", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1)
+        Text("$name  $value", style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface, maxLines = 1)
     }
 }
 
@@ -999,7 +1004,7 @@ private fun Loading(accent: Color) {
     Column(Modifier.fillMaxWidth().padding(top = 60.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         CircularProgressIndicator(color = accent, strokeWidth = 2.dp, modifier = Modifier.size(30.dp))
         Spacer(Modifier.height(12.dp))
-        Text("Pulling live WiGLE standings…", color = Palette.muted, fontFamily = Mono, fontSize = 12.sp)
+        Text("Pulling live WiGLE standings…", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -1007,31 +1012,17 @@ private fun Loading(accent: Color) {
 private fun ErrorBox(message: String, accent: Color) {
     Column(
         Modifier.fillMaxWidth().padding(top = 30.dp)
-            .border(1.dp, Palette.line, RoundedCornerShape(12.dp))
+            
             .background(Palette.surface.copy(alpha = 0.7f), RoundedCornerShape(12.dp)).padding(16.dp)
     ) {
-        Text("Couldn't reach WiGLE", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+        Text("Couldn't reach WiGLE", style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
         Spacer(Modifier.height(6.dp))
-        Text(message.ifBlank { "No connection or no data returned." }, color = Palette.muted, fontFamily = Mono, fontSize = 12.sp)
+        Text(message.ifBlank { "No connection or no data returned." }, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(6.dp))
-        Text("Check your internet connection and try again.", color = Palette.muted, fontFamily = Mono, fontSize = 11.sp)
+        Text("Check your internet connection and try again.", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
-@Composable
-private fun TabPill(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, on: Boolean, accent: Color, modifier: Modifier, onClick: () -> Unit) {
-    Row(
-        modifier
-            .background(if (on) accent.copy(alpha = 0.20f) else Palette.surface, RoundedCornerShape(8.dp))
-            .border(1.dp, if (on) accent.copy(alpha = 0.7f) else Palette.line, RoundedCornerShape(8.dp))
-            .clickable { onClick() }.padding(vertical = 11.dp),
-        horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(icon, null, tint = if (on) accent else Palette.muted, modifier = Modifier.size(14.dp))
-        Spacer(Modifier.width(6.dp))
-        Text(label, color = if (on) accent else Palette.muted, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-    }
-}
 
 @Composable
 private fun MiniToggle(label: String, on: Boolean, accent: Color, modifier: Modifier, onClick: () -> Unit) {
@@ -1042,6 +1033,6 @@ private fun MiniToggle(label: String, on: Boolean, accent: Color, modifier: Modi
             .clickable { onClick() }.padding(vertical = 8.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(label, color = if (on) accent else Palette.muted, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+        Text(label, style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = if (on) accent else Palette.muted)
     }
 }

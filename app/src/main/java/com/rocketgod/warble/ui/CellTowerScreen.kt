@@ -35,29 +35,26 @@ import java.util.Locale
 fun CellTowerDetailScreen(id: String, towers: List<CellTowerEntity>, accent: Color, onBack: () -> Unit) {
     val t = towers.firstOrNull { it.id == id }
     val df = SimpleDateFormat("MMM d · h:mm a", Locale.US)
-    Column(Modifier.fillMaxSize().background(Palette.paper).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
-        Spacer(Modifier.height(14.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Filled.ArrowBack, "back", tint = Palette.ink, modifier = Modifier.clickable { onBack() })
-            Spacer(Modifier.width(12.dp))
-            Text("CELL TOWER", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-        }
+    com.rocketgod.warble.ui.components.ScrollScreen(
+        title = t?.operator ?: "Cell tower",
+        subtitle = t?.let { it.tech + if (it.registeredEver) " · serving cell" else " · neighbor" },
+        onBack = onBack
+    ) {
         if (t == null) {
             Spacer(Modifier.height(16.dp))
-            Text("This tower is no longer in the log.", color = Palette.muted, fontFamily = Mono, fontSize = 13.sp)
-            return
+            Text("This tower is no longer in the log.", style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
+            return@ScrollScreen
         }
-        Spacer(Modifier.height(6.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Filled.CellTower, null, tint = accent, modifier = Modifier.size(26.dp))
-            Spacer(Modifier.width(10.dp))
-            Text(t.operator, color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 22.sp, maxLines = 1)
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
+            com.rocketgod.warble.ui.components.CategoryAvatar(com.rocketgod.warble.domain.model.DeviceCategory.CELL_TOWER, size = 48.dp)
+            Spacer(Modifier.width(12.dp))
+            Column {
+                Text("${t.lastDbm} dBm", style = androidx.compose.material3.MaterialTheme.typography.headlineSmall)
+                Text("${t.asuBars()} of 4 bars", style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
-        Text(t.tech + (if (t.registeredEver) " · serving cell" else " · neighbor"),
-            color = if (t.registeredEver) accent else Palette.muted, fontFamily = Mono, fontSize = 12.sp,
-            modifier = Modifier.padding(top = 2.dp))
-
-        Spacer(Modifier.height(16.dp))
         Section("IDENTITY", accent)
         Field("Technology", t.tech, accent)
         Field("Operator (MCC / MNC)", "${t.mcc.ifBlank { "—" }} / ${t.mnc.ifBlank { "—" }}", accent)
@@ -81,7 +78,6 @@ fun CellTowerDetailScreen(id: String, towers: List<CellTowerEntity>, accent: Col
         Field("First seen", df.format(Date(t.firstSeen)), accent)
         Field("Last seen", df.format(Date(t.lastSeen)), accent)
         Field("Times logged", "${t.timesSeen}", accent)
-        Spacer(Modifier.height(30.dp))
     }
 }
 
@@ -90,16 +86,7 @@ private fun CellTowerEntity.asuBars(): Int = when {
 }
 
 @Composable
-private fun Section(title: String, accent: Color) {
-    Text(title, color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp,
-        modifier = Modifier.padding(bottom = 6.dp))
-}
+private fun Section(title: String, @Suppress("UNUSED_PARAMETER") accent: Color) = com.rocketgod.warble.ui.components.KitSection(title)
 
 @Composable
-private fun Field(label: String, value: String, accent: Color) {
-    Column(Modifier.fillMaxWidth().padding(vertical = 7.dp)) {
-        Text(label, color = Palette.muted, fontFamily = Mono, fontSize = 11.sp)
-        Text(value, color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-    }
-    Box(Modifier.fillMaxWidth().height(1.dp).background(Palette.line.copy(alpha = 0.18f)))
-}
+private fun Field(label: String, value: String, @Suppress("UNUSED_PARAMETER") accent: Color) = com.rocketgod.warble.ui.components.KitField(label, value)

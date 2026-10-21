@@ -64,11 +64,11 @@ fun ThreatScopeTool(contacts: List<Contact>, accent: Color, onSelect: (Contact) 
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(start = 36.dp, end = 36.dp, bottom = 8.dp)) {
             Icon(Icons.Filled.Security, null, tint = accent, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(8.dp))
-            Text("Offensive Devices", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Text("Offensive Devices", style = androidx.compose.material3.MaterialTheme.typography.titleMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
             Spacer(Modifier.weight(1f))
             if (threats.isNotEmpty()) Text(
                 "${threats.size}", color = inkOn(Color(ThreatLane.ATTACK.colorArgb)),
-                fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                fontFamily = AppFont, fontWeight = FontWeight.Bold, fontSize = 13.sp,
                 modifier = Modifier
                     .background(Color(ThreatLane.ATTACK.colorArgb), RoundedCornerShape(8.dp))
                     .padding(horizontal = 9.dp, vertical = 3.dp)
@@ -80,16 +80,16 @@ fun ThreatScopeTool(contacts: List<Contact>, accent: Color, onSelect: (Contact) 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Filled.Security, null, tint = Palette.muted, modifier = Modifier.size(40.dp))
                     Spacer(Modifier.height(10.dp))
-                    Text("All clear", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text("All clear", style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
                     Spacer(Modifier.height(4.dp))
-                    Text("No offensive devices in range", color = Palette.muted, fontFamily = Mono, fontSize = 12.sp)
+                    Text("No offensive devices in range", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         } else {
             LazyColumn(Modifier.fillMaxSize()) {
                 items(threats, key = { "threat_" + it.first.key }) { (c, t) ->
                     ThreatRow(c, t, accent, onSelect)
-                    Box(Modifier.fillMaxWidth().height(1.dp).background(Palette.line.copy(alpha = 0.35f)))
+                    androidx.compose.material3.HorizontalDivider(color = androidx.compose.material3.MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 }
             }
         }
@@ -117,7 +117,7 @@ private fun ThreatRow(c: Contact, t: ThreatHit, accent: Color, onSelect: (Contac
         val sub = name ?: t.lane.label
         Column(Modifier.weight(1f)) {
 
-            Text(headline, color = laneColor, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 16.sp, maxLines = 1)
+            Text(headline, style = androidx.compose.material3.MaterialTheme.typography.titleMedium, color = laneColor, maxLines = 1)
             Spacer(Modifier.height(2.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
@@ -125,9 +125,9 @@ private fun ThreatRow(c: Contact, t: ThreatHit, accent: Color, onSelect: (Contac
                     null, tint = Palette.muted, modifier = Modifier.size(12.dp)
                 )
                 Spacer(Modifier.width(4.dp))
-                Text(sub, color = Palette.muted, fontFamily = Mono, fontSize = 12.sp, maxLines = 1)
+                Text(sub, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
             }
         }
-        Text("${c.rssi}dBm", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        Text("${c.rssi}dBm", style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = accent)
     }
 }

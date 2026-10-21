@@ -89,18 +89,18 @@ fun SpectrumAnalyzerTool(contacts: List<Contact>, accent: Color) {
             modifier = Modifier.fillMaxWidth().height(34.dp).padding(start = 36.dp, end = 36.dp)) {
             Icon(Icons.Filled.GraphicEq, null, tint = accent, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(7.dp))
-            Text("Spectrum Analyzer", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 15.sp,
+            Text("Spectrum Analyzer", style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
                 maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
             if (total > 0) {
                 Spacer(Modifier.width(6.dp))
-                Text("$total APs", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 12.sp,
+                Text("$total APs", style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = accent,
                     maxLines = 1, softWrap = false,
                     modifier = Modifier.background(accent.copy(alpha = 0.16f), RoundedCornerShape(8.dp)).padding(horizontal = 9.dp, vertical = 3.dp))
             }
         }
 
         Text("each arch = one AP · ch width · height = signal",
-            color = Palette.muted, fontFamily = Mono, fontSize = 11.sp, maxLines = 2,
+            style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 6.dp))
 
@@ -109,9 +109,9 @@ fun SpectrumAnalyzerTool(contacts: List<Contact>, accent: Color) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Filled.Wifi, null, tint = Palette.muted, modifier = Modifier.size(40.dp))
                     Spacer(Modifier.height(10.dp))
-                    Text("No Wi-Fi in range yet", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text("No Wi-Fi in range yet", style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
                     Spacer(Modifier.height(4.dp))
-                    Text("Arches fill in as access points are seen", color = Palette.muted, fontFamily = Mono, fontSize = 12.sp)
+                    Text("Arches fill in as access points are seen", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             return
@@ -156,7 +156,7 @@ private fun SpectrumBand(label: String, bandColor: Color, aps: List<Ap>, freqLo:
             .border(1.dp, bandColor.copy(alpha = 0.30f), RoundedCornerShape(10.dp))
             .padding(top = 4.dp, bottom = 2.dp)
     ) {
-        Text(label, color = bandColor, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+        Text(label, style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = bandColor,
             textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(bottom = 2.dp))
         Canvas(Modifier.fillMaxWidth().weight(1f).padding(horizontal = 6.dp)) {
             val span = (freqHi - freqLo).toFloat().coerceAtLeast(1f)

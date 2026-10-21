@@ -56,12 +56,12 @@ fun CoverGlance(contacts: List<Contact>, scanning: Boolean, hasFix: Boolean, sat
             Box(Modifier.size(8.dp).clip(CircleShape).background(if (scanning) accent.copy(alpha = pulse) else Palette.line))
             Spacer(Modifier.width(6.dp))
             Icon(Icons.Filled.Bolt, null, tint = accent, modifier = Modifier.size(15.dp))
-            Text("WARDRIVE", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            Text("WARDRIVE", style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = accent)
         }
         Spacer(Modifier.height(6.dp))
 
-        Text("$ap", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 68.sp, maxLines = 1)
-        Text("APs in range", color = Palette.muted, fontFamily = Mono, fontSize = 12.sp)
+        Text("$ap", color = accent, fontFamily = AppFont, fontWeight = FontWeight.Bold, fontSize = 68.sp, maxLines = 1)
+        Text("APs in range", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(12.dp))
 
         Row(horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -73,7 +73,7 @@ fun CoverGlance(contacts: List<Contact>, scanning: Boolean, hasFix: Boolean, sat
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Filled.LocationOn, null, tint = if (hasFix) accent else Palette.muted, modifier = Modifier.size(15.dp))
             Spacer(Modifier.width(4.dp))
-            Text(if (hasFix) "$sats sats · $spd" else "no fix", color = Palette.ink, fontFamily = Mono, fontSize = 13.sp,
+            Text(if (hasFix) "$sats sats · $spd" else "no fix", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
                 maxLines = 1, textAlign = TextAlign.Center)
         }
     }
@@ -84,6 +84,6 @@ private fun GlancePip(icon: androidx.compose.ui.graphics.vector.ImageVector, cou
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, null, tint = accent, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(5.dp))
-        Text("$count", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 22.sp, maxLines = 1)
+        Text("$count", style = androidx.compose.material3.MaterialTheme.typography.headlineSmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface, maxLines = 1)
     }
 }

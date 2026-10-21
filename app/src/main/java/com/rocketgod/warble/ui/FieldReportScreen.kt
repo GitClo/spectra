@@ -1,5 +1,11 @@
 package com.rocketgod.warble.ui
 
+import androidx.compose.foundation.layout.fillMaxSize
+
+import androidx.compose.material.icons.filled.Key
+
+import androidx.compose.material.icons.filled.Factory
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -135,16 +141,10 @@ fun FieldReportScreen(
     val expanded = remember { mutableStateMapOf<String, Boolean>() }
     val masters = listOf(SignalType.BLE, SignalType.WIFI, SignalType.CELL)
 
-    LazyColumn(Modifier.fillMaxWidth().background(Palette.paper).padding(horizontal = 16.dp)) {
+    Column(Modifier.fillMaxSize()) {
+    com.rocketgod.warble.ui.components.BackTopBar("Field report", onBack, subtitle = "Everything you've logged, by category")
+    LazyColumn(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
         item {
-            Spacer(Modifier.height(14.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.ArrowBack, "back", tint = Palette.ink, modifier = Modifier.clickable { onBack() })
-                Spacer(Modifier.width(12.dp))
-                Text("FIELD REPORT", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-            }
-            Text("Everything you've logged, categorized. Tap a section to expand.", color = Palette.muted, fontFamily = Mono, fontSize = 12.sp)
-            Spacer(Modifier.height(14.dp))
             SheetRow("SIGNAL", "TOTAL", "UNIQUE", "NEW", "WiGLE", header = true, accent = accent)
             stats.perType.forEach { t ->
                 SheetRow(t.type.label, Leaderboard.fmt(t.totalObservations), Leaderboard.fmt(t.unique),
@@ -156,7 +156,7 @@ fun FieldReportScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.SettingsInputAntenna, null, tint = accent, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("$monCount captured via external monitor adapter", color = accent, fontFamily = Mono, fontSize = 12.sp)
+                    Text("$monCount captured via external monitor adapter", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = accent)
                 }
             }
             Spacer(Modifier.height(14.dp))
@@ -175,12 +175,12 @@ fun FieldReportScreen(
             SyncCard(newForWigle, newForWdgw, wiglePhase, wdgwPhase, accent, onSendWigle, onSendWdgw, onSettings)
             Spacer(Modifier.height(8.dp))
             Text("The badge is new Wi-Fi (what WiGLE scores). A send uploads every new signal — Bluetooth and cell too — then these drop to 0. WiGLE and WDGWars track separately.",
-                color = Palette.muted, fontFamily = Mono, fontSize = 11.sp)
+                style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
             if (exportSessions.isNotEmpty()) {
                 val exOpen = expanded["m:exported"] == true
                 Spacer(Modifier.height(16.dp))
                 Row(
-                    Modifier.fillMaxWidth().background(Palette.panel, RoundedCornerShape(10.dp))
+                    Modifier.fillMaxWidth().background(androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(16.dp))
                         .clickable { expanded["m:exported"] = !exOpen }.padding(horizontal = 12.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -188,9 +188,9 @@ fun FieldReportScreen(
                     Spacer(Modifier.width(8.dp))
                     Icon(Icons.Filled.CloudUpload, null, tint = accent, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(10.dp))
-                    Text("EXPORTED", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                    Text("Exported", style = androidx.compose.material3.MaterialTheme.typography.titleMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
                     Spacer(Modifier.width(8.dp))
-                    Text("${exportSessions.size}", color = Palette.muted, fontFamily = Mono, fontSize = 14.sp)
+                    Text("${exportSessions.size}", style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 if (exOpen) {
                 Spacer(Modifier.height(6.dp))
@@ -203,14 +203,14 @@ fun FieldReportScreen(
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f)) {
                             Text(if (e.dest.isNotBlank()) "Sent to ${e.dest}" else "Exported",
-                                color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
                             Text("${fmtExportDate(e.exportedAt)} · ${e.wifi} wifi · ${e.ble} ble · ${e.cell} cell",
-                                color = Palette.muted, fontFamily = Mono, fontSize = 11.sp)
+                                style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
                         }
 
-                        Text("${e.wifi} Wi-Fi", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Text("${e.wifi} Wi-Fi", style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = accent)
                     }
-                    Box(Modifier.fillMaxWidth().height(1.dp).background(Palette.line.copy(alpha = 0.25f)))
+                    androidx.compose.material3.HorizontalDivider(color = androidx.compose.material3.MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 }
                 }
             }
@@ -221,25 +221,23 @@ fun FieldReportScreen(
             item(key = "master_pmkid") {
                 Spacer(Modifier.height(14.dp))
                 Row(
-                    Modifier.fillMaxWidth().background(Palette.panel, RoundedCornerShape(10.dp))
+                    Modifier.fillMaxWidth().background(androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(16.dp))
                         .clickable { expanded["m:pmkid"] = !pmkidOpen }.padding(horizontal = 12.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(if (pmkidOpen) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, null, tint = Palette.muted, modifier = Modifier.size(22.dp))
                     Spacer(Modifier.width(8.dp))
 
-                    Box(Modifier.size(22.dp), contentAlignment = Alignment.Center) {
-                        Text("#", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                    }
+                    Icon(Icons.Filled.Key, null, tint = accent, modifier = Modifier.size(22.dp))
                     Spacer(Modifier.width(10.dp))
-                    Text("HASH CAPTURES", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                    Text("Hash captures", style = androidx.compose.material3.MaterialTheme.typography.titleMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
                     Spacer(Modifier.width(8.dp))
-                    Text("${pmkids.size}", color = Palette.muted, fontFamily = Mono, fontSize = 14.sp)
+                    Text("${pmkids.size}", style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.weight(1f))
                     MapButton(accent) { onPmkidMap() }
                 }
                 if (pmkidOpen) Text("Passive PMKIDs + 4-way handshakes from EAPOL via external adapter. Tap for hashcat 22000 export.",
-                    color = Palette.muted, fontFamily = Mono, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp, start = 2.dp))
+                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp, start = 2.dp))
             }
             if (pmkidOpen) items(pmkids.take(10), key = { "pmkid_${it.pmkid}" }) { p ->
                 Row(
@@ -249,8 +247,8 @@ fun FieldReportScreen(
                     Icon(Icons.Filled.Wifi, null, tint = accent, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(p.ssid?.ifBlank { null } ?: "<hidden>", color = Palette.ink, fontFamily = Mono, fontSize = 15.sp, maxLines = 1)
-                        Text("${p.bssid} · ch ${p.channel}", color = Palette.muted, fontFamily = Mono, fontSize = 11.sp, maxLines = 1)
+                        Text(p.ssid?.ifBlank { null } ?: "<hidden>", style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface, maxLines = 1)
+                        Text("${p.bssid} · ch ${p.channel}", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                     }
                     if (p.lat != null && p.lng != null) {
                         Icon(Icons.Filled.LocationOn, "located", tint = Palette.gold, modifier = Modifier.size(16.dp))
@@ -258,7 +256,7 @@ fun FieldReportScreen(
                     }
                     Icon(Icons.Filled.ChevronRight, null, tint = Palette.muted, modifier = Modifier.width(18.dp))
                 }
-                Box(Modifier.fillMaxWidth().height(1.dp).background(Palette.line.copy(alpha = 0.18f)))
+                androidx.compose.material3.HorizontalDivider(color = androidx.compose.material3.MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             }
             if (pmkidOpen && pmkids.size > 10) {
                 item(key = "pmkid_more") {
@@ -266,7 +264,7 @@ fun FieldReportScreen(
                         Modifier.fillMaxWidth().clickable { onPmkids() }.padding(vertical = 12.dp),
                         horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("View all ${pmkids.size} captures →", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text("View all ${pmkids.size} captures →", style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = accent)
                     }
                 }
             }
@@ -283,7 +281,7 @@ fun FieldReportScreen(
                 item(key = "master_${master.name}") {
                     Spacer(Modifier.height(14.dp))
                     Row(
-                        Modifier.fillMaxWidth().background(Palette.panel, RoundedCornerShape(10.dp))
+                        Modifier.fillMaxWidth().background(androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(16.dp))
                             .clickable { expanded[mkey] = !mOpen }.padding(horizontal = 12.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -291,9 +289,9 @@ fun FieldReportScreen(
                         Spacer(Modifier.width(8.dp))
                         Icon(masterIcon(master), null, tint = accent, modifier = Modifier.size(22.dp))
                         Spacer(Modifier.width(10.dp))
-                        Text(master.label, color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                        Text(master.label, style = androidx.compose.material3.MaterialTheme.typography.titleMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
                         Spacer(Modifier.width(8.dp))
-                        Text("$masterTotal", color = Palette.muted, fontFamily = Mono, fontSize = 14.sp)
+                        Text("$masterTotal", style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.weight(1f))
                         if (masterLocated > 0) MapButton(accent) { onMasterMap(master) }
                     }
@@ -311,10 +309,10 @@ fun FieldReportScreen(
                             Spacer(Modifier.width(8.dp))
                             Icon(iconFor("", cat), null, tint = if (open) accent else Palette.muted, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text(cat, color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.weight(1f))
-                            Text("${tc.c}", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text(cat, style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                            Text("${tc.c}", style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = accent)
                         }
-                        Box(Modifier.fillMaxWidth().height(1.dp).background(Palette.line.copy(alpha = 0.3f)))
+                        androidx.compose.material3.HorizontalDivider(color = androidx.compose.material3.MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                         if (open) ExpandedRows({ loadCat(master.name, cat) }, accent, accent, onSelectObs)
                     }
                 }
@@ -327,7 +325,7 @@ fun FieldReportScreen(
             item(key = "master_monitor") {
                 Spacer(Modifier.height(14.dp))
                 Row(
-                    Modifier.fillMaxWidth().background(Palette.panel, RoundedCornerShape(10.dp))
+                    Modifier.fillMaxWidth().background(androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(16.dp))
                         .clickable { expanded["m:monitor"] = !monOpen }.padding(horizontal = 12.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -335,12 +333,12 @@ fun FieldReportScreen(
                     Spacer(Modifier.width(8.dp))
                     Icon(Icons.Filled.Bolt, null, tint = Palette.gold, modifier = Modifier.size(22.dp))
                     Spacer(Modifier.width(10.dp))
-                    Text("EXTERNAL MONITOR", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                    Text("External monitor", style = androidx.compose.material3.MaterialTheme.typography.titleMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
                     Spacer(Modifier.width(8.dp))
-                    Text("$monTotal", color = Palette.muted, fontFamily = Mono, fontSize = 14.sp)
+                    Text("$monTotal", style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                if (monOpen) Text("Promiscuous 802.11 capture via an external adapter (AR9271, dual-band MT7612U, or high-gain RT3070) — access points and client stations, including devices the phone radio can't see.",
-                    color = Palette.muted, fontFamily = Mono, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp, start = 2.dp))
+                if (monOpen) Text("Passive 802.11 capture via an external monitor-mode adapter (AR9271, RT3070/RT5370, MT7612U, RTL8814AU, RTL8821AU): access points and client stations, including devices the phone radio can't see.",
+                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp, start = 2.dp))
             }
             if (monOpen) monitorCats.sortedByDescending { it.c }.forEach { cc ->
                 val cat = cc.category
@@ -355,10 +353,10 @@ fun FieldReportScreen(
                         Spacer(Modifier.width(8.dp))
                         Icon(iconFor("", cat), null, tint = if (open) Palette.gold else Palette.muted, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text(cat, color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.weight(1f))
-                        Text("${cc.c}", color = Palette.gold, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text(cat, style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                        Text("${cc.c}", style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = Palette.gold)
                     }
-                    Box(Modifier.fillMaxWidth().height(1.dp).background(Palette.line.copy(alpha = 0.3f)))
+                    androidx.compose.material3.HorizontalDivider(color = androidx.compose.material3.MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                     if (open) ExpandedRows({ loadMonitorCat(cat) }, accent, Palette.gold, onSelectObs)
                 }
             }
@@ -369,7 +367,7 @@ fun FieldReportScreen(
             item(key = "master_gnss") {
                 Spacer(Modifier.height(14.dp))
                 Row(
-                    Modifier.fillMaxWidth().background(Palette.panel, RoundedCornerShape(10.dp))
+                    Modifier.fillMaxWidth().background(androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(16.dp))
                         .clickable { expanded["m:gnss"] = !gnssOpen }.padding(horizontal = 12.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -377,12 +375,12 @@ fun FieldReportScreen(
                     Spacer(Modifier.width(8.dp))
                     Icon(Icons.Filled.SatelliteAlt, null, tint = accent, modifier = Modifier.size(22.dp))
                     Spacer(Modifier.width(10.dp))
-                    Text("GNSS SATELLITES", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                    Text("GNSS satellites", style = androidx.compose.material3.MaterialTheme.typography.titleMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
                     Spacer(Modifier.width(8.dp))
-                    Text("${satellites.size}", color = Palette.muted, fontFamily = Mono, fontSize = 14.sp)
+                    Text("${satellites.size}", style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 if (gnssOpen) Text("Every satellite your phone has logged — app-only, never uploaded. Tap a constellation, then a satellite for full detail.",
-                    color = Palette.muted, fontFamily = Mono, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp, start = 2.dp))
+                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp, start = 2.dp))
             }
             val byConst = satellites.groupBy { it.constellation }.toList().sortedByDescending { it.second.size }
             if (gnssOpen) byConst.forEach { (cons, sats) ->
@@ -397,10 +395,10 @@ fun FieldReportScreen(
                         Spacer(Modifier.width(8.dp))
                         Icon(Icons.Filled.SatelliteAlt, null, tint = if (open) accent else Palette.muted, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text(cons, color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.weight(1f))
-                        Text("${sats.size}", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text(cons, style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                        Text("${sats.size}", style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = accent)
                     }
-                    Box(Modifier.fillMaxWidth().height(1.dp).background(Palette.line.copy(alpha = 0.3f)))
+                    androidx.compose.material3.HorizontalDivider(color = androidx.compose.material3.MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 }
                 if (open) {
                     items(sats.sortedByDescending { it.bestCn0 }, key = { "sat_${it.id}" }) { s ->
@@ -411,14 +409,14 @@ fun FieldReportScreen(
                             Icon(Icons.Filled.SatelliteAlt, null, tint = if (s.usedInFix) accent else Palette.muted, modifier = Modifier.width(26.dp))
                             Spacer(Modifier.width(10.dp))
                             Column(Modifier.weight(1f)) {
-                                Text("PRN ${s.svid}", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                Text("PRN ${s.svid}", style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
                                 Text("peak ${s.bestCn0.toInt()} dB-Hz" + if (s.hasEphemeris) " · ephemeris" else "",
-                                    color = Palette.muted, fontFamily = Mono, fontSize = 11.sp)
+                                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Text("×${s.timesSeen}", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text("×${s.timesSeen}", style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = accent)
                             Icon(Icons.Filled.ChevronRight, null, tint = Palette.muted, modifier = Modifier.width(18.dp))
                         }
-                        Box(Modifier.fillMaxWidth().height(1.dp).background(Palette.line.copy(alpha = 0.18f)))
+                        androidx.compose.material3.HorizontalDivider(color = androidx.compose.material3.MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                     }
                 }
             }
@@ -429,7 +427,7 @@ fun FieldReportScreen(
             item(key = "master_cells") {
                 Spacer(Modifier.height(14.dp))
                 Row(
-                    Modifier.fillMaxWidth().background(Palette.panel, RoundedCornerShape(10.dp))
+                    Modifier.fillMaxWidth().background(androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(16.dp))
                         .clickable { expanded["m:cells"] = !cellsOpen }.padding(horizontal = 12.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -437,12 +435,12 @@ fun FieldReportScreen(
                     Spacer(Modifier.width(8.dp))
                     Icon(Icons.Filled.CellTower, null, tint = accent, modifier = Modifier.size(22.dp))
                     Spacer(Modifier.width(10.dp))
-                    Text("CELL TOWERS", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                    Text("Cell towers", style = androidx.compose.material3.MaterialTheme.typography.titleMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
                     Spacer(Modifier.width(8.dp))
-                    Text("${cellTowers.size}", color = Palette.muted, fontFamily = Mono, fontSize = 14.sp)
+                    Text("${cellTowers.size}", style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 if (cellsOpen) Text("Every cell tower seen, with full identity and signal detail — logged app-only. Tap a technology, then a tower for full detail.",
-                    color = Palette.muted, fontFamily = Mono, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp, start = 2.dp))
+                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp, start = 2.dp))
             }
             val byTech = cellTowers.groupBy { it.tech }.toList().sortedByDescending { it.second.size }
             if (cellsOpen) byTech.forEach { (tech, towers) ->
@@ -457,10 +455,10 @@ fun FieldReportScreen(
                         Spacer(Modifier.width(8.dp))
                         Icon(Icons.Filled.CellTower, null, tint = if (open) accent else Palette.muted, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text(tech, color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.weight(1f))
-                        Text("${towers.size}", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text(tech, style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                        Text("${towers.size}", style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = accent)
                     }
-                    Box(Modifier.fillMaxWidth().height(1.dp).background(Palette.line.copy(alpha = 0.3f)))
+                    androidx.compose.material3.HorizontalDivider(color = androidx.compose.material3.MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 }
                 if (open) {
                     items(towers.sortedByDescending { it.bestDbm }, key = { "cell_${it.id}" }) { c ->
@@ -472,14 +470,14 @@ fun FieldReportScreen(
                             Spacer(Modifier.width(10.dp))
                             Column(Modifier.weight(1f)) {
                                 Text("${c.operator} · ${if (c.cid >= 0) "CID ${c.cid}" else "PCI ${c.pci ?: "?"}"}",
-                                    color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
+                                    style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface, maxLines = 1)
                                 Text("peak ${c.bestDbm} dBm" + (c.band?.let { " · $it" } ?: "") + (if (c.registeredEver) " · serving" else ""),
-                                    color = Palette.muted, fontFamily = Mono, fontSize = 11.sp, maxLines = 1)
+                                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                             }
-                            Text("×${c.timesSeen}", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text("×${c.timesSeen}", style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = accent)
                             Icon(Icons.Filled.ChevronRight, null, tint = Palette.muted, modifier = Modifier.width(18.dp))
                         }
-                        Box(Modifier.fillMaxWidth().height(1.dp).background(Palette.line.copy(alpha = 0.18f)))
+                        androidx.compose.material3.HorizontalDivider(color = androidx.compose.material3.MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                     }
                 }
             }
@@ -495,7 +493,7 @@ fun FieldReportScreen(
             item(key = "master_${sec.key}") {
                 Spacer(Modifier.height(14.dp))
                 Row(
-                    Modifier.fillMaxWidth().background(Palette.panel, RoundedCornerShape(10.dp))
+                    Modifier.fillMaxWidth().background(androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(16.dp))
                         .clickable { expanded["m:${sec.key}"] = !open }.padding(horizontal = 12.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -503,15 +501,15 @@ fun FieldReportScreen(
                     Spacer(Modifier.width(8.dp))
                     Icon(sec.icon, null, tint = secColor, modifier = Modifier.size(22.dp))
                     Spacer(Modifier.width(10.dp))
-                    Text(sec.label, color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 16.sp, maxLines = 1)
+                    Text(sec.label, style = androidx.compose.material3.MaterialTheme.typography.titleMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface, maxLines = 1)
                     Spacer(Modifier.width(8.dp))
-                    Text("$count", color = Palette.muted, fontFamily = Mono, fontSize = 14.sp)
+                    Text("$count", style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.weight(1f))
                     if (count > 0) MapButton(accent) { onCategoryMap(sec.label, loadBrands) }
                 }
             }
             if (open) item(key = "rows_${sec.key}") {
-                if (count == 0L) Text("Nothing yet", color = Palette.muted, fontFamily = Mono, fontSize = 12.sp,
+                if (count == 0L) Text("Nothing yet", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 20.dp, top = 8.dp, bottom = 10.dp))
                 else ExpandedRows({ loadNotable(loadBrands) }, accent, secColor, onSelectObs, noun = sec.noun, notable = true)
             }
@@ -522,48 +520,46 @@ fun FieldReportScreen(
             item(key = "master_maker") {
                 Spacer(Modifier.height(14.dp))
                 Row(
-                    Modifier.fillMaxWidth().background(Palette.panel, RoundedCornerShape(10.dp))
+                    Modifier.fillMaxWidth().background(androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(16.dp))
                         .clickable { expanded["m:maker"] = !makerOpen }.padding(horizontal = 12.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(if (makerOpen) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, null, tint = Palette.muted, modifier = Modifier.size(22.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("🏭", fontSize = 20.sp)
+                    Icon(Icons.Filled.Factory, null, tint = accent, modifier = Modifier.size(22.dp))
                     Spacer(Modifier.width(10.dp))
-                    Text("BY MAKER", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                    Text("By maker", style = androidx.compose.material3.MaterialTheme.typography.titleMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
                     Spacer(Modifier.width(8.dp))
-                    Text("${makers.size}", color = Palette.muted, fontFamily = Mono, fontSize = 14.sp)
+                    Text("${makers.size}", style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                if (makerOpen) Text("Tap a maker for its full device list", color = Palette.muted, fontFamily = Mono, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp, start = 2.dp))
+                if (makerOpen) Text("Tap a maker for its full device list", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp, start = 2.dp))
             }
             if (makerOpen) items(makers, key = { "m_${it.maker}" }) { m ->
                 Row(
                     Modifier.fillMaxWidth().clickable { onSelectMaker(m.maker) }.padding(vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(m.maker, color = Palette.ink, fontFamily = Mono, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                    Text("${m.devices}", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text(m.maker, style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                    Text("${m.devices}", style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = accent)
                     Spacer(Modifier.width(8.dp))
                     Icon(Icons.Filled.ChevronRight, null, tint = Palette.muted, modifier = Modifier.width(18.dp))
                 }
-                Box(Modifier.fillMaxWidth().height(1.dp).background(Palette.line.copy(alpha = 0.25f)))
+                androidx.compose.material3.HorizontalDivider(color = androidx.compose.material3.MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             }
         }
 
         item { Spacer(Modifier.height(30.dp)) }
     }
+    }
 }
 
 @Composable
-private fun MapButton(accent: Color, onClick: () -> Unit) {
-    Row(
-        Modifier.border(1.dp, accent, RoundedCornerShape(8.dp)).clickable { onClick() }
-            .padding(horizontal = 12.dp, vertical = 7.dp),
-        verticalAlignment = Alignment.CenterVertically
+private fun MapButton(@Suppress("UNUSED_PARAMETER") accent: Color, onClick: () -> Unit) {
+    androidx.compose.material3.FilledTonalButton(
+        onClick = onClick, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+        modifier = Modifier.height(34.dp)
     ) {
-        Icon(Icons.Filled.Map, null, tint = accent, modifier = Modifier.size(16.dp))
-        Spacer(Modifier.width(6.dp))
-        Text("Map", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1, softWrap = false)
+        Icon(Icons.Filled.Map, null, Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text("Map", maxLines = 1)
     }
 }
 
@@ -576,10 +572,10 @@ private fun ExpandedRows(
     val rows by produceState<List<ObservationEntity>?>(null) { value = loader() }
     val r = rows
     if (r == null) {
-        Text("Loading…", color = Palette.muted, fontFamily = Mono, fontSize = 12.sp,
+        Text("Loading…", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 20.dp, top = 8.dp, bottom = 10.dp))
     } else if (r.isEmpty()) {
-        Text("Nothing yet", color = Palette.muted, fontFamily = Mono, fontSize = 12.sp,
+        Text("Nothing yet", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 20.dp, top = 8.dp, bottom = 10.dp))
     } else {
         Column(Modifier.fillMaxWidth()) { r.forEach { o -> DeviceRow(o, accent, tint, noun, notable, onSelectObs) } }
@@ -609,22 +605,22 @@ private fun DeviceRow(o: ObservationEntity, accent: Color, tint: Color, noun: St
         type = o.name ?: "— not advertised"
         subtitle = "${o.maker ?: o.category}${if (o.lat != null) " · geotagged" else ""}${if (o.inWigle) " · WiGLE" else ""}${if (o.viaMonitor) " · MON" else ""}"
     }
-    Row(
-        Modifier.fillMaxWidth().clickable { onSelectObs(o) }.padding(start = 20.dp, top = 9.dp, bottom = 9.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(iconFor(o.icon, o.category), null, tint = if (!notable && o.name.isNullOrBlank()) Palette.muted else tint, modifier = Modifier.width(26.dp))
-        Spacer(Modifier.width(10.dp))
-        Column(Modifier.weight(1f)) {
-            Text(type, color = Palette.ink, fontFamily = Mono, fontSize = 15.sp, maxLines = 1)
-            Text(subtitle, color = Palette.muted, fontFamily = Mono, fontSize = 11.sp, maxLines = 1)
+    androidx.compose.material3.ListItem(
+        modifier = Modifier.clickable { onSelectObs(o) },
+        colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = Color.Transparent),
+        leadingContent = {
+            com.rocketgod.warble.ui.components.CategoryAvatar(com.rocketgod.warble.domain.model.DeviceCategory.of(o.category), size = 36.dp, highlight = notable)
+        },
+        headlineContent = { Text(type, maxLines = 1, color = if (!notable && o.name.isNullOrBlank()) androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant else androidx.compose.material3.MaterialTheme.colorScheme.onSurface) },
+        supportingContent = { Text(subtitle, maxLines = 1) },
+        trailingContent = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (o.viaMonitor) { Icon(Icons.Filled.SettingsInputAntenna, "Monitor capture", tint = androidx.compose.material3.MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(15.dp)); Spacer(Modifier.width(6.dp)) }
+                Text("${o.bestRssi} dBm", style = androidx.compose.material3.MaterialTheme.typography.labelMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
-        if (o.viaMonitor) { Icon(Icons.Filled.SettingsInputAntenna, null, tint = accent, modifier = Modifier.size(15.dp)); Spacer(Modifier.width(6.dp)) }
-        Text("${o.bestRssi}dBm", color = Palette.muted, fontFamily = Mono, fontSize = 12.sp)
-        Spacer(Modifier.width(6.dp))
-        Icon(Icons.Filled.ChevronRight, null, tint = Palette.muted, modifier = Modifier.width(18.dp))
-    }
-    Box(Modifier.fillMaxWidth().height(1.dp).background(Palette.line.copy(alpha = 0.18f)))
+    )
+    androidx.compose.material3.HorizontalDivider(Modifier.padding(start = 68.dp), color = androidx.compose.material3.MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 }
 
 private fun fmtExportDate(ts: Long): String =
@@ -644,122 +640,89 @@ private fun masterIcon(t: SignalType): ImageVector = when (t) {
 
 @Composable
 private fun SheetRow(a: String, b: String, c: String, d: String, e: String, header: Boolean = false, accent: Color) {
-    val col = if (header) Palette.muted else Palette.ink
+    val cs = androidx.compose.material3.MaterialTheme.colorScheme
+    val st = if (header) androidx.compose.material3.MaterialTheme.typography.labelMedium else androidx.compose.material3.MaterialTheme.typography.bodyMedium
+    val col = if (header) cs.onSurfaceVariant else cs.onSurface
     Row(
-        Modifier.fillMaxWidth().background(if (header) Palette.panel else Palette.surface).padding(vertical = 10.dp, horizontal = 8.dp)
+        Modifier.fillMaxWidth()
+            .background(if (header) cs.surfaceContainerHigh else cs.surfaceContainerLow,
+                if (header) RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp) else RoundedCornerShape(0.dp))
+            .padding(vertical = 10.dp, horizontal = 12.dp)
     ) {
-        Text(a, color = if (header) Palette.muted else accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.weight(1.4f))
-        Text(b, color = col, fontFamily = Mono, fontSize = 13.sp, modifier = Modifier.weight(1f))
-        Text(c, color = col, fontFamily = Mono, fontSize = 13.sp, modifier = Modifier.weight(1f))
-        Text(d, color = col, fontFamily = Mono, fontSize = 13.sp, modifier = Modifier.weight(1f))
-        Text(e, color = col, fontFamily = Mono, fontSize = 13.sp, modifier = Modifier.weight(1f))
-    }
-    Box(Modifier.fillMaxWidth().height(1.dp).background(Palette.line.copy(alpha = 0.3f)))
-}
-
-@Composable
-private fun ActionBtn(label: String, icon: ImageVector, tint: Color, modifier: Modifier, onClick: () -> Unit) {
-    Row(
-        modifier.border(1.dp, Palette.line, RoundedCornerShape(10.dp)).background(Palette.surface, RoundedCornerShape(10.dp))
-            .clickable { onClick() }.padding(vertical = 12.dp),
-        horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(icon, null, tint = tint, modifier = Modifier.width(18.dp))
-        Spacer(Modifier.width(6.dp))
-        Text(label, color = Palette.ink, fontFamily = Mono, fontSize = 12.sp)
+        Text(a.lowercase().replaceFirstChar { it.uppercase() }, style = if (header) st else androidx.compose.material3.MaterialTheme.typography.titleSmall,
+            color = if (header) col else accent, modifier = Modifier.weight(1.4f))
+        listOf(b, c, d, e).forEach { v ->
+            Text(if (header && v != "WiGLE") v.lowercase().replaceFirstChar { it.uppercase() } else v, style = st, color = col,
+                modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.End)
+        }
     }
 }
 
 @Composable
-private fun ImportWigleBtn(importing: Boolean, count: Int, accent: Color, modifier: Modifier, onClick: () -> Unit) {
-    Row(
-        modifier.border(1.dp, if (importing) accent else Palette.line, RoundedCornerShape(10.dp))
-            .background(Palette.surface, RoundedCornerShape(10.dp))
-            .clickable { onClick() }.padding(vertical = 12.dp),
-        horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically
-    ) {
+private fun ActionBtn(label: String, icon: ImageVector, @Suppress("UNUSED_PARAMETER") tint: Color, modifier: Modifier, onClick: () -> Unit) {
+    androidx.compose.material3.OutlinedButton(onClick = onClick, modifier = modifier) {
+        Icon(icon, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text(label, maxLines = 1)
+    }
+}
+
+@Composable
+private fun ImportWigleBtn(importing: Boolean, count: Int, @Suppress("UNUSED_PARAMETER") accent: Color, modifier: Modifier, onClick: () -> Unit) {
+    androidx.compose.material3.OutlinedButton(onClick = onClick, modifier = modifier) {
         if (importing) {
-            androidx.compose.material3.CircularProgressIndicator(color = accent, strokeWidth = 2.dp, modifier = Modifier.size(15.dp))
+            androidx.compose.material3.CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(8.dp))
-            Text("Syncing $count · stop", color = accent, fontFamily = Mono, fontSize = 12.sp)
+            Text("Syncing $count · stop", maxLines = 1)
         } else {
-            Icon(Icons.Filled.CloudDownload, null, tint = accent, modifier = Modifier.width(18.dp))
-            Spacer(Modifier.width(6.dp))
-            Text("Sync WiGLE (dedup)", color = Palette.ink, fontFamily = Mono, fontSize = 12.sp)
+            Icon(Icons.Filled.CloudDownload, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Sync WiGLE", maxLines = 1)
         }
     }
 }
 
 @Composable
 private fun SyncCard(newForWigle: Long, newForWdgw: Long, wiglePhase: com.rocketgod.warble.SendPhase, wdgwPhase: com.rocketgod.warble.SendPhase, accent: Color, onSendWigle: () -> Unit, onSendWdgw: () -> Unit, onSettings: () -> Unit) {
-    Column(
-        Modifier.fillMaxWidth()
-            .border(1.dp, Palette.line, RoundedCornerShape(14.dp))
-            .background(Palette.surface, RoundedCornerShape(14.dp)).padding(14.dp)
+    androidx.compose.material3.Card(
+        colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerLow),
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("SYNC NEW NETWORKS", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.weight(1f))
-
-            Row(
-                Modifier.border(1.dp, Palette.line, RoundedCornerShape(8.dp)).clickable { onSettings() }
-                    .padding(horizontal = 10.dp, vertical = 5.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Filled.Settings, null, tint = accent, modifier = Modifier.size(15.dp))
-                Spacer(Modifier.width(5.dp))
-                Text("Keys", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+        Column(Modifier.padding(16.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("Sync new networks", style = androidx.compose.material3.MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                androidx.compose.material3.TextButton(onClick = onSettings) {
+                    Icon(Icons.Filled.Settings, null, Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text("Keys")
+                }
             }
+            Spacer(Modifier.height(8.dp))
+            SendPill("WiGLE", newForWigle, wiglePhase, Palette.gold, onSendWigle)
+            Spacer(Modifier.height(8.dp))
+            SendPill("WDGWars", newForWdgw, wdgwPhase, accent, onSendWdgw)
         }
-        Spacer(Modifier.height(10.dp))
-        SendPill("WiGLE", newForWigle, wiglePhase, Palette.gold, onSendWigle)
-        Spacer(Modifier.height(8.dp))
-        SendPill("WDGWars", newForWdgw, wdgwPhase, accent, onSendWdgw)
     }
 }
 
+/** Send button for one service, showing progress / done / nothing-to-send states. */
 @Composable
-private fun SendPill(service: String, count: Long, phase: SendPhase, color: Color, onClick: () -> Unit) {
+private fun SendPill(service: String, count: Long, phase: SendPhase, @Suppress("UNUSED_PARAMETER") color: Color, onClick: () -> Unit) {
     val busy = phase == SendPhase.WRITING || phase == SendPhase.UPLOADING || phase == SendPhase.SAVING
     val none = count <= 0L && phase == SendPhase.IDLE
-    val fg = if (none) Palette.muted else Palette.ink
-    Row(
-        Modifier.fillMaxWidth()
-            .then(if (none) Modifier.background(Palette.panel, RoundedCornerShape(10.dp))
-                  else Modifier.glassAction(color, RoundedCornerShape(10.dp)))
-            .clickable(enabled = !none && phase == SendPhase.IDLE) { onClick() }
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+    androidx.compose.material3.Button(
+        onClick = onClick, enabled = !none && phase == SendPhase.IDLE, modifier = Modifier.fillMaxWidth()
     ) {
         when {
             phase == SendPhase.SENT -> {
-                Icon(Icons.Filled.CheckCircle, null, tint = color, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("✓ Sent to $service!", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Icon(Icons.Filled.CheckCircle, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Sent to $service")
             }
             busy -> {
-
-                val label = when (phase) {
-                    SendPhase.WRITING -> "Writing file…"
-                    SendPhase.UPLOADING -> "Uploading → $service…"
-                    else -> "Saving…"
-                }
-                androidx.compose.material3.CircularProgressIndicator(color = color, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
+                androidx.compose.material3.CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(16.dp),
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.width(8.dp))
-                Text(label, color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Text(when (phase) { SendPhase.WRITING -> "Writing file…"; SendPhase.UPLOADING -> "Uploading to $service…"; else -> "Saving…" })
             }
             else -> {
-                Icon(Icons.Filled.CloudUpload, null, tint = if (none) Palette.muted else color, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(if (none) "$service — all sent" else "Send new → $service",
-                    color = fg, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp,
-                    modifier = Modifier.weight(1f))
-                Box(
-                    Modifier.background(if (none) Color.Transparent else color.copy(alpha = 0.22f), RoundedCornerShape(8.dp))
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
-                ) {
-                    Text(if (none) "0" else Leaderboard.fmt(count),
-                        color = fg, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                }
+                Icon(Icons.Filled.CloudUpload, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp))
+                Text(if (none) "$service: all sent" else "Send new to $service", modifier = Modifier.weight(1f))
+                if (!none) androidx.compose.material3.Badge(
+                    containerColor = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary, contentColor = androidx.compose.material3.MaterialTheme.colorScheme.primary
+                ) { Text(Leaderboard.fmt(count)) }
             }
         }
     }

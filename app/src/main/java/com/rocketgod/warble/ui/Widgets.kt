@@ -41,7 +41,7 @@ fun AutoShrinkLink(
     Text(
         text = label,
         color = accent,
-        fontFamily = Mono,
+        fontFamily = AppFont,
         fontWeight = FontWeight.Bold,
         fontSize = fs,
         maxLines = 1,
@@ -56,15 +56,15 @@ fun AutoShrinkLink(
 @Composable
 fun CmdBox(label: String, cmd: String, accent: Color) {
     Column(Modifier.fillMaxWidth()) {
-        Text(label, color = accent.copy(alpha = 0.85f), fontFamily = Mono, fontSize = 10.sp)
+        Text(label, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = accent.copy(alpha = 0.85f))
         Spacer(Modifier.height(2.dp))
         Box(
             Modifier.fillMaxWidth()
-                .border(1.dp, Palette.line, RoundedCornerShape(8.dp))
+                
                 .background(Palette.panel, RoundedCornerShape(8.dp))
                 .padding(horizontal = 10.dp, vertical = 8.dp)
         ) {
-            SelectionContainer { Text(cmd, color = Palette.ink, fontFamily = Mono, fontSize = 11.sp) }
+            SelectionContainer { Text(cmd, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface) }
         }
     }
 }

@@ -13,6 +13,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -72,25 +75,17 @@ fun PmkidDetailScreen(p: PmkidEntity, accent: Color, onBack: () -> Unit, onMap: 
         }.onFailure { note = "share failed: ${it.message}" }
     }
 
-    Column(Modifier.fillMaxSize().background(Palette.paper).verticalScroll(rememberScrollState()).padding(16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier.size(42.dp).background(Palette.surface, CircleShape)
-                    .border(1.dp, accent.copy(alpha = 0.5f), CircleShape).clickable { onBack() },
-                contentAlignment = Alignment.Center
-            ) { Icon(Icons.Filled.ArrowBack, "back", tint = accent, modifier = Modifier.size(22.dp)) }
-            Spacer(Modifier.width(12.dp))
-            Text(p.ssid?.ifBlank { null } ?: "<hidden>", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 20.sp, maxLines = 1)
+    com.rocketgod.warble.ui.components.ScrollScreen(
+        title = p.ssid?.ifBlank { null } ?: "Hidden network",
+        subtitle = if (p.kind == 2) "Passive 4-way handshake (WPA*02)" else "Passive PMKID (WPA*01)",
+        onBack = onBack
+    ) {
+        note?.let {
+            Text(it, style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, color = accent, modifier = Modifier.padding(top = 4.dp))
         }
-        Spacer(Modifier.height(4.dp))
-        Text(note ?: (if (p.kind == 2) "Passive 4-way handshake (WPA*02) · hashcat 22000" else "Passive PMKID (WPA*01) · hashcat 22000"),
-            color = if (note != null) accent else Palette.muted, fontFamily = Mono, fontSize = 11.sp)
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(12.dp))
 
-        Column(
-            Modifier.fillMaxWidth().border(1.dp, Palette.line, RoundedCornerShape(12.dp))
-                .background(Palette.surface, RoundedCornerShape(12.dp)).padding(14.dp)
-        ) {
+        com.rocketgod.warble.ui.components.SectionCard {
             Field("BSSID (AP)", p.bssid, accent)
             Field("STA (client)", p.sta, accent)
             Field("Channel", "${p.channel}${if (p.channel <= 14) " (2.4 GHz)" else " (5 GHz)"}", accent)
@@ -99,70 +94,47 @@ fun PmkidDetailScreen(p: PmkidEntity, accent: Color, onBack: () -> Unit, onMap: 
             val loc = if (located) "%.6f, %.6f".format(p.lat, p.lng) else "not located"
             Field("Location", loc, accent)
             if (located && onMap != null) {
-                Spacer(Modifier.height(6.dp))
-                Row(
-                    Modifier.clickable { onMap() }
-                        .background(accent.copy(alpha = 0.14f), RoundedCornerShape(8.dp))
-                        .border(1.dp, accent.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Filled.Place, null, tint = accent, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(7.dp))
-                    Text("View capture on map", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                }
+                androidx.compose.material3.AssistChip(
+                    onClick = onMap, label = { Text("View capture on map") },
+                    leadingIcon = { Icon(Icons.Filled.Place, null, Modifier.size(18.dp)) }
+                )
             }
             val when_ = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(java.util.Date(p.firstSeen))
             Field("Captured", when_, accent)
         }
         Spacer(Modifier.height(14.dp))
 
-        Text("HASHCAT 22000", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-        Spacer(Modifier.height(6.dp))
-        Box(
-            Modifier.fillMaxWidth().border(1.dp, Palette.line, RoundedCornerShape(10.dp))
-                .background(Palette.surface, RoundedCornerShape(10.dp)).padding(12.dp)
-        ) {
-            SelectionContainer {
-                Text(line, color = Palette.ink, fontFamily = Mono, fontSize = 11.sp)
+        com.rocketgod.warble.ui.components.KitSection("Hashcat 22000")
+        androidx.compose.material3.Surface(shape = androidx.compose.material3.MaterialTheme.shapes.medium, color = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
+            SelectionContainer(Modifier.padding(12.dp)) {
+                Text(line, style = com.rocketgod.warble.ui.theme.CodeStyle, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
             }
         }
-        Spacer(Modifier.height(14.dp))
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
-            @Composable
-            fun Btn(label: String, onClick: () -> Unit) {
-                Text(label, color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp,
-                    modifier = Modifier.padding(end = 10.dp)
-                        .glassAction(accent, RoundedCornerShape(9.dp))
-                        .clickable { onClick() }
-                        .padding(horizontal = 18.dp, vertical = 10.dp))
-            }
-            Btn("COPY") { clip.setText(AnnotatedString(line)); note = "Copied ✓" }
-            Btn("SAVE") { note = "Saved → ${save()}" }
-            Btn("SEND") { share() }
+        Spacer(Modifier.height(12.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+            com.rocketgod.warble.ui.components.KitAction("Copy", Icons.Filled.ContentCopy, { clip.setText(AnnotatedString(line)); note = "Copied ✓" }, primary = true, modifier = Modifier.weight(1f))
+            com.rocketgod.warble.ui.components.KitAction("Save", Icons.Filled.Download, { note = "Saved → ${save()}" }, tonal = true, modifier = Modifier.weight(1f))
+            com.rocketgod.warble.ui.components.KitAction("Send", Icons.Filled.Share, { share() }, tonal = true, modifier = Modifier.weight(1f))
         }
 
-        Spacer(Modifier.height(18.dp))
-        Text("CRACK IT · hashcat mode 22000", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+        com.rocketgod.warble.ui.components.KitSection("Crack it · hashcat mode 22000")
         Spacer(Modifier.height(6.dp))
         CmdBox("Linux / macOS", "hashcat -m 22000 capture.hc22000 wordlist.txt", accent)
         Spacer(Modifier.height(6.dp))
         CmdBox("Windows · PowerShell", ".\\hashcat.exe -m 22000 capture.hc22000 wordlist.txt", accent)
 
         Spacer(Modifier.height(14.dp))
-        Text("CRACK ONLINE", color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-        Spacer(Modifier.height(6.dp))
+        com.rocketgod.warble.ui.components.KitSection("Crack online")
         AutoShrinkLink("https://handshakecrack.com/", "handshakecrack.com", accent, maxSize = 24.sp)
-        Spacer(Modifier.height(24.dp))
     }
 }
 
 @Composable
 private fun Field(label: String, value: String, accent: Color) {
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.Top) {
-        Text(label, color = accent, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.width(110.dp))
+        Text(label, style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(110.dp))
         SelectionContainer(Modifier.weight(1f)) {
-            Text(value, color = Palette.ink, fontFamily = Mono, fontSize = 13.sp)
+            Text(value, style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
         }
     }
 }
