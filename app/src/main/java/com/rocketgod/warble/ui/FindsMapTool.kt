@@ -56,23 +56,10 @@ import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Overlay
 import org.osmdroid.views.overlay.TilesOverlay
-import org.osmdroid.views.overlay.simplefastpoint.SimpleFastPointOverlay
-import org.osmdroid.views.overlay.simplefastpoint.SimpleFastPointOverlayOptions
-import org.osmdroid.views.overlay.simplefastpoint.SimplePointTheme
 
-internal fun cartoBasemap(dark: Boolean): XYTileSource {
-    val style = if (dark) "dark_nolabels" else "rastertiles/voyager"
-    return XYTileSource(
-        if (dark) "CartoDarkNoLabels" else "CartoVoyager", 1, 20, 256, ".png",
-        arrayOf(
-            "https://a.basemaps.cartocdn.com/$style/",
-            "https://b.basemaps.cartocdn.com/$style/",
-            "https://c.basemaps.cartocdn.com/$style/",
-            "https://d.basemaps.cartocdn.com/$style/"
-        ),
-        "© OpenStreetMap contributors, © CARTO"
-    )
-}
+internal fun cartoBasemap(dark: Boolean): org.osmdroid.tileprovider.tilesource.OnlineTileSourceBase =
+    if (dark) CartoTiles.source("CartoDarkNoLabels", "dark_nolabels", 256, ".png")
+    else CartoTiles.source("CartoVoyager", "rastertiles/voyager", 256, ".png")
 
 private val DARK_TILE_FILTER = android.graphics.ColorMatrixColorFilter(
     android.graphics.ColorMatrix(floatArrayOf(
@@ -95,7 +82,8 @@ private val DARK_LABEL_FILTER = android.graphics.ColorMatrixColorFilter(
 private class DarkLabelsOverlay(p: org.osmdroid.tileprovider.MapTileProviderBase, ctx: android.content.Context) : TilesOverlay(p, ctx)
 
 internal fun applyBasemap(mv: MapView, dark: Boolean) {
-    val want = if (dark) "CartoDarkNoLabels" else "CartoVoyager"
+    // Names include the API-key tag, so a key change swaps the source and reloads tiles.
+    val want = CartoTiles.sourceName(if (dark) "CartoDarkNoLabels" else "CartoVoyager")
     if (mv.tileProvider.tileSource.name() != want) {
         mv.setTileSource(cartoBasemap(dark))
         mv.overlayManager.tilesOverlay.setColorFilter(if (dark) DARK_TILE_FILTER else null)
@@ -103,13 +91,7 @@ internal fun applyBasemap(mv: MapView, dark: Boolean) {
         mv.overlays.removeAll { it is DarkLabelsOverlay }
         if (dark) {
 
-            val labelSrc = XYTileSource("CartoDarkLabels2x", 1, 20, 512, "@2x.png",
-                arrayOf(
-                    "https://a.basemaps.cartocdn.com/dark_only_labels/",
-                    "https://b.basemaps.cartocdn.com/dark_only_labels/",
-                    "https://c.basemaps.cartocdn.com/dark_only_labels/",
-                    "https://d.basemaps.cartocdn.com/dark_only_labels/"
-                ), "© OpenStreetMap contributors, © CARTO")
+            val labelSrc = CartoTiles.source("CartoDarkLabels2x", "dark_only_labels", 512, "@2x.png")
             val prov = org.osmdroid.tileprovider.MapTileProviderBasic(mv.context, labelSrc)
             mv.overlays.add(0, DarkLabelsOverlay(prov, mv.context).apply {
                 loadingBackgroundColor = android.graphics.Color.TRANSPARENT
@@ -140,27 +122,82 @@ internal class MeOverlay(accentInt: Int, private val getPose: () -> Triple<Doubl
     }
 }
 
-private class FindsPointsOverlay(color: Int, @Volatile var points: List<MapPoint>, private val onTap: (String) -> Unit) : Overlay() {
-    private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-        this.color = color; style = android.graphics.Paint.Style.FILL
+/**
+ * Draws finds by layer: Wi-Fi APs as filled dots (security color), other devices as rings
+ * (type color), cell towers as squares. Layers switched off in [MapLayerState] are skipped for
+ * drawing and tapping. Optional coverage circles show modelled transmitter range when zoomed in.
+ */
+private class FindsPointsOverlay(
+    private val fallbackColor: Int,
+    @Volatile var points: List<MapPoint>,
+    private val darkMap: Boolean,
+    private val onTap: (String) -> Unit,
+) : Overlay() {
+    private val fill = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply { style = android.graphics.Paint.Style.FILL }
+    private val stroke = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply { style = android.graphics.Paint.Style.STROKE }
+    private val halo = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+        style = android.graphics.Paint.Style.FILL; color = if (darkMap) 0xCC000000.toInt() else 0xCCFFFFFF.toInt()
+    }
+    private val coverage = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+        style = android.graphics.Paint.Style.STROKE
+        pathEffect = android.graphics.DashPathEffect(floatArrayOf(10f, 8f), 0f)
     }
     private val pt = android.graphics.Point()
+
+    private fun visible(p: MapPoint, enabled: Set<MapLayer>) = p.layer == null || p.layer in enabled
+
     override fun draw(canvas: android.graphics.Canvas, mapView: MapView, shadow: Boolean) {
         if (shadow) return
         val proj = mapView.projection
         val w = mapView.width; val h = mapView.height
         val margin = kotlin.math.max(w, h)
-        for (p in points) {
+        val d = mapView.resources.displayMetrics.density
+        val enabled = MapLayerState.enabled
+        val r = 3.2f * d
+
+        // Coverage circles first, underneath the points.
+        if (MapLayerState.coverage && mapView.zoomLevelDouble >= 15.0) {
+            coverage.strokeWidth = 1.5f * d
+            for (p in points) {
+                val range = p.rangeM ?: continue
+                if (!visible(p, enabled)) continue
+                proj.toPixels(GeoPoint(p.lat, p.lng), pt)
+                val rad = proj.metersToPixels(range.toFloat())
+                if (pt.x + rad < 0 || pt.y + rad < 0 || pt.x - rad > w || pt.y - rad > h) continue
+                coverage.color = p.layer?.colorArgb(darkMap) ?: fallbackColor; coverage.alpha = 150
+                canvas.drawCircle(pt.x.toFloat(), pt.y.toFloat(), rad, coverage)
+            }
+        }
+        // Draw order: Wi-Fi, then devices, then cells, so rarer layers stay on top.
+        for (pass in 0..2) for (p in points) {
+            val layer = p.layer
+            val order = when (layer?.shape) { PointShape.DOT, null -> 0; PointShape.RING -> 1; PointShape.SQUARE -> 2 }
+            if (order != pass || !visible(p, enabled)) continue
             proj.toPixels(GeoPoint(p.lat, p.lng), pt)
             if (pt.x < -margin || pt.y < -margin || pt.x > w + margin || pt.y > h + margin) continue
-            canvas.drawCircle(pt.x.toFloat(), pt.y.toFloat(), 5f, paint)
+            val x = pt.x.toFloat(); val y = pt.y.toFloat()
+            val c = layer?.colorArgb(darkMap) ?: fallbackColor
+            when (layer?.shape ?: PointShape.DOT) {
+                PointShape.DOT -> { fill.color = c; canvas.drawCircle(x, y, r, fill) }
+                PointShape.RING -> {
+                    canvas.drawCircle(x, y, r + 1.6f * d, halo)
+                    stroke.color = c; stroke.strokeWidth = 2f * d; canvas.drawCircle(x, y, r, stroke)
+                }
+                PointShape.SQUARE -> {
+                    val s = r + 1.5f * d
+                    canvas.drawRect(x - s - d, y - s - d, x + s + d, y + s + d, halo)
+                    fill.color = c; canvas.drawRect(x - s, y - s, x + s, y + s, fill)
+                }
+            }
         }
     }
 
     override fun onSingleTapConfirmed(e: android.view.MotionEvent, mapView: MapView): Boolean {
         val proj = mapView.projection
+        val enabled = MapLayerState.enabled
         var best: String? = null; var bestD = Float.MAX_VALUE
         for (p in points) {
+            if (!visible(p, enabled)) continue
             proj.toPixels(GeoPoint(p.lat, p.lng), pt)
             val dx = e.x - pt.x; val dy = e.y - pt.y; val d = dx * dx + dy * dy
             if (d < bestD) { bestD = d; best = p.key }
@@ -257,7 +294,10 @@ fun FindsMapTool(
     val hasWigle = wigleName.isNotBlank() && wigleToken.isNotBlank()
     var showWigle by remember { mutableStateOf(false) }
     val wigleOv = remember { mutableStateOf<TilesOverlay?>(null) }
-    var count by remember { mutableStateOf(-1) }
+    var loaded by remember { mutableStateOf<List<MapPoint>?>(null) }
+    val layersOn = MapLayerState.enabled
+    val count = loaded?.count { it.layer == null || it.layer in layersOn } ?: -1
+    var layersOpen by remember { mutableStateOf(false) }
 
     var follow by rememberSaveable { mutableStateOf(true) }
     var savedLat by rememberSaveable { mutableStateOf(Double.NaN) }
@@ -285,22 +325,10 @@ fun FindsMapTool(
             val pts = runCatching { loadPointsIn(bb.latSouth, bb.latNorth, bb.lonWest, bb.lonEast) }.getOrNull() ?: return@launch
             lastReloadAt = System.currentTimeMillis()
             lastReload = cLat to cLon
-            count = pts.size
-            val geos = pts.map { GeoPoint(it.lat, it.lng) }
-
-            val newOv: Overlay = if (follow || geos.size <= 4000) {
-
-                val capped = if (pts.size > 12000) pts.filterIndexed { i, _ -> i % (pts.size / 12000 + 1) == 0 } else pts
-                FindsPointsOverlay(accentInt, capped, onOpenPoint)
-            } else {
-                val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                    color = accentInt; style = android.graphics.Paint.Style.FILL
-                }
-                val opts = SimpleFastPointOverlayOptions.getDefaultStyle()
-                    .setAlgorithm(SimpleFastPointOverlayOptions.RenderingAlgorithm.MAXIMUM_OPTIMIZATION)
-                    .setRadius(5f).setIsClickable(false).setCellSize(6).setPointStyle(paint)
-                SimpleFastPointOverlay(SimplePointTheme(geos, false), opts)
-            }
+            loaded = pts
+            // Decimate very dense views; layers are filtered at draw time so toggles are instant.
+            val capped = if (pts.size > 12000) pts.filterIndexed { i, _ -> i % (pts.size / 12000 + 1) == 0 } else pts
+            val newOv: Overlay = FindsPointsOverlay(accentInt, capped, UiFlags.darkMap, onOpenPoint)
             overlayRef?.let { mv.overlays.remove(it) }
             mv.overlays.add(newOv)
             overlayRef = newOv
@@ -329,6 +357,9 @@ fun FindsMapTool(
     LaunchedEffect(enabledIcons) {
         markersRef?.let { it.enabled = enabledIcons; mapRef?.invalidate() }
     }
+    LaunchedEffect(layersOn, MapLayerState.coverage) { mapRef?.invalidate() }
+    // Estimated vs last-seen positions changes where points are, so reload.
+    LaunchedEffect(MapLayerState.useEstimates) { mapRef?.let { reload(it, gate = false) } }
 
     LaunchedEffect(accentInt) {
         val mv = mapRef ?: return@LaunchedEffect
@@ -445,7 +476,7 @@ fun FindsMapTool(
 
         Text(
             when { count < 0 -> "Loading finds…"; count == 0 -> "No finds in view"; else -> "$count in view" },
-            color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 11.sp,
+            style = androidx.compose.material3.MaterialTheme.typography.labelMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
 
             modifier = Modifier.align(Alignment.TopCenter).padding(top = 6.dp)
                 .background(Palette.surface.copy(alpha = 0.9f), RoundedCornerShape(8.dp))
@@ -454,41 +485,21 @@ fun FindsMapTool(
 
         if (onBack == null) Text(
             "✌ two fingers to move the map",
-            color = Palette.muted, fontFamily = Mono, fontSize = 9.sp, maxLines = 1,
+            style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp)
                 .background(Palette.surface.copy(alpha = 0.85f), RoundedCornerShape(6.dp)).padding(horizontal = 7.dp, vertical = 3.dp)
         )
 
-        val filterChips = listOf(
-            com.rocketgod.warble.R.drawable.ic_marker_camera to setOf(MapMarkerIcon.CAMERA),
-            com.rocketgod.warble.R.drawable.ic_marker_drone to setOf(MapMarkerIcon.DRONE),
-            com.rocketgod.warble.R.drawable.ic_marker_bolt to setOf(MapMarkerIcon.BOLT),
-            com.rocketgod.warble.R.drawable.ic_marker_tag to setOf(MapMarkerIcon.TAG),
-            com.rocketgod.warble.R.drawable.ic_marker_key to setOf(MapMarkerIcon.KEY, MapMarkerIcon.LINK)
-        )
-
         val edgeSafe: Modifier = if (onBack != null) Modifier.navigationBarsPadding() else Modifier
         val gestureSafe: Modifier = if (onBack != null) Modifier.systemGestureExclusion() else Modifier
-        Column(Modifier.align(Alignment.BottomStart).then(edgeSafe).padding(6.dp).then(gestureSafe), horizontalAlignment = Alignment.Start) {
-            if (filterOpen) filterChips.forEach { (res, icons) ->
-                val on = enabledIcons.containsAll(icons)
-                Box(
-                    Modifier.size(30.dp)
-                        .background(if (on) accent else Palette.surface.copy(alpha = 0.9f), RoundedCornerShape(8.dp))
-                        .border(1.dp, accent.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
-                        .clickable { MapLayerFilter.toggle(ctx, icons) },
-                    contentAlignment = Alignment.Center
-                ) { Icon(painterResource(res), null, tint = if (on) inkOn(accent) else Palette.muted, modifier = Modifier.size(16.dp)) }
-                Spacer(Modifier.height(6.dp))
-            }
-            Box(
-                Modifier.size(30.dp)
-                    .background(if (filterOpen) accent else Palette.surface.copy(alpha = 0.9f), RoundedCornerShape(8.dp))
-                    .border(1.dp, accent.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
-                    .clickable { filterOpen = !filterOpen },
-                contentAlignment = Alignment.Center
-            ) { Icon(Icons.Filled.Layers, "marker filters", tint = if (filterOpen) inkOn(accent) else accent, modifier = Modifier.size(18.dp)) }
-        }
+        Box(
+            Modifier.align(Alignment.BottomStart).then(edgeSafe).padding(6.dp).then(gestureSafe).size(30.dp)
+                .background(if (layersOpen) accent else Palette.surface.copy(alpha = 0.9f), RoundedCornerShape(8.dp))
+                .border(1.dp, accent.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
+                .clickable { layersOpen = true },
+            contentAlignment = Alignment.Center
+        ) { Icon(Icons.Filled.Layers, "Map layers", tint = if (layersOpen) inkOn(accent) else accent, modifier = Modifier.size(18.dp)) }
+        if (layersOpen) MapLayersSheet(onDismiss = { layersOpen = false })
 
         Column(Modifier.align(Alignment.BottomEnd).then(edgeSafe).padding(6.dp).then(gestureSafe), horizontalAlignment = Alignment.End) {
             Box(

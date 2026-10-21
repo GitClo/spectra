@@ -55,7 +55,13 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Overlay
 import org.osmdroid.views.overlay.TilesOverlay
 
-data class MapPoint(val lat: Double, val lng: Double, val label: String, val key: String)
+data class MapPoint(
+    val lat: Double, val lng: Double, val label: String, val key: String,
+    /** Finds-map layer; null draws in the accent color (category / filtered maps). */
+    val layer: MapLayer? = null,
+    /** Modelled coverage radius of an estimated fixed transmitter, metres. */
+    val rangeM: Double? = null,
+)
 
 enum class MapMarkerKind { OFFENSIVE, PMKID, HANDSHAKE }
 
@@ -179,10 +185,10 @@ fun MapScreen(
                 Spacer(Modifier.height(120.dp))
                 Icon(Icons.Filled.LocationOff, null, tint = Palette.muted, modifier = Modifier.width(48.dp))
                 Spacer(Modifier.height(12.dp))
-                Text("No geotagged devices here yet.", color = Palette.ink, fontFamily = Mono, fontSize = 15.sp)
+                Text("No geotagged devices here yet.", style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
                 Spacer(Modifier.height(6.dp))
                 Text("Contacts get a location stamp when a GPS fix is available while scanning. Move around outdoors and they'll start appearing on the map.",
-                    color = Palette.muted, fontFamily = Mono, fontSize = 12.sp)
+                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
             AndroidView(
@@ -234,21 +240,18 @@ fun MapScreen(
             )
         }
 
-        Column(
-            Modifier.fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(Palette.paper.copy(alpha = 0.92f), Color.Transparent)))
-                .statusBarsPadding().padding(horizontal = 14.dp, vertical = 12.dp)
+        Row(
+            Modifier.fillMaxWidth().statusBarsPadding().padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    Modifier.size(44.dp).background(Palette.surface.copy(alpha = 0.92f), CircleShape)
-                        .border(1.dp, accent.copy(alpha = 0.6f), CircleShape).clickable { onBack() },
-                    contentAlignment = Alignment.Center
-                ) { Icon(Icons.Filled.ArrowBack, "back", tint = accent, modifier = Modifier.size(22.dp)) }
-                Spacer(Modifier.width(12.dp))
-                Column {
-                    Text(title, color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 18.sp, maxLines = 1)
-                    Text("${clean.size} geotagged · tap a dot for detail", color = accent, fontFamily = Mono, fontSize = 12.sp)
+            androidx.compose.material3.FilledTonalIconButton(onClick = onBack) { Icon(Icons.Filled.ArrowBack, "Back") }
+            Spacer(Modifier.width(8.dp))
+            androidx.compose.material3.Surface(shape = androidx.compose.material3.MaterialTheme.shapes.extraLarge,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.95f), modifier = Modifier.weight(1f)) {
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    Text(title, style = androidx.compose.material3.MaterialTheme.typography.titleMedium, maxLines = 1)
+                    Text("${clean.size} geotagged · tap a dot for detail", style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -256,7 +259,7 @@ fun MapScreen(
         if (clean.isNotEmpty()) {
             Text(
                 "© OpenStreetMap · CARTO",
-                color = Palette.paper.copy(alpha = 0.7f), fontFamily = Mono, fontSize = 9.sp,
+                style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = Palette.paper.copy(alpha = 0.7f),
                 modifier = Modifier.align(Alignment.BottomStart).padding(6.dp)
                     .background(Palette.ink.copy(alpha = 0.55f), RoundedCornerShape(4.dp)).padding(horizontal = 5.dp, vertical = 2.dp)
             )
@@ -300,11 +303,8 @@ fun MapScreen(
                     Spacer(Modifier.height(8.dp))
                 }
 
-                Box(
-                    Modifier.size(46.dp)
-                        .background(Palette.surface.copy(alpha = 0.92f), RoundedCornerShape(10.dp))
-                        .border(1.dp, accent.copy(alpha = 0.6f), RoundedCornerShape(10.dp))
-                        .clickable {
+                androidx.compose.material3.FilledTonalIconButton(
+                    onClick = {
                             val mv = mapRefState
                             val pose = currentPose()?.takeIf { !(it.first == 0.0 && it.second == 0.0) }
                             if (mv != null) {
@@ -319,8 +319,8 @@ fun MapScreen(
                                 mv.invalidate()
                             }
                         },
-                    contentAlignment = Alignment.Center
-                ) { Icon(Icons.Filled.MyLocation, "my location", tint = accent, modifier = Modifier.size(22.dp)) }
+                    modifier = Modifier.size(48.dp)
+                ) { Icon(Icons.Filled.MyLocation, "My location") }
             }
         }
     }
