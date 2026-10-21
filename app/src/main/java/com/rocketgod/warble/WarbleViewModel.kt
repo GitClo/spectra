@@ -212,6 +212,8 @@ class WarbleViewModel(app: Application) : AndroidViewModel(app) {
     init {
         viewModelScope.launch { publishToWatchLoop() }
         viewModelScope.launch { publishWidgetLoop() }
+        // Anti-stalking detector + one-off security backfill / history pruning.
+        com.rocketgod.warble.core.AppGraph.get(app).following.start(viewModelScope)
 
         viewModelScope.launch {
             repo.notableSightings.collect { hit ->
@@ -272,10 +274,28 @@ class WarbleViewModel(app: Application) : AndroidViewModel(app) {
             .map { com.rocketgod.warble.ui.MapPoint(it.lat, it.lng, it.name ?: "", it.key) }.toList()
     }
 
+    /**
+     * Finds for the main map: each point carries its map layer (Wi-Fi security / device type /
+     * cell) and, for stationary APs and cells, its estimated transmitter position and range.
+     */
     suspend fun findMapPointsIn(south: Double, north: Double, west: Double, east: Double): List<com.rocketgod.warble.ui.MapPoint> {
         val blocked = repo.blockedKeysNow()
-        return repo.mapPointsIn(south, north, west, east).asSequence().filter { it.key.lowercase() !in blocked }
-            .map { com.rocketgod.warble.ui.MapPoint(it.lat, it.lng, it.name ?: "", it.key) }.toList()
+        val useEst = com.rocketgod.warble.ui.MapLayerState.useEstimates
+        // Pad the query box a little: an estimate may sit just outside where it was last heard.
+        val padLat = (north - south) * 0.1; val padLng = (east - west) * 0.1
+        val riskCache = HashMap<String?, com.rocketgod.warble.domain.security.SecurityRisk>()
+        return com.rocketgod.warble.core.AppGraph.get(getApplication()).intel
+            .mapFindsIn(south - padLat, north + padLat, west - padLng, east + padLng)
+            .asSequence().filter { it.key.lowercase() !in blocked }
+            .map { r ->
+                val est = useEst && r.estLat != null && r.estLng != null
+                com.rocketgod.warble.ui.MapPoint(
+                    lat = if (est) r.estLat!! else r.lat, lng = if (est) r.estLng!! else r.lng,
+                    label = r.name ?: "", key = r.key,
+                    layer = com.rocketgod.warble.ui.MapLayer.of(r.type, r.category, r.security, r.capabilities, riskCache),
+                    rangeM = r.rangeM,
+                )
+            }.toList()
     }
 
     suspend fun recentLocatedLatLng(): Pair<Double, Double>? = repo.recentLocatedLatLng()
@@ -378,7 +398,9 @@ class WarbleViewModel(app: Application) : AndroidViewModel(app) {
 
         val s = Stats(
             thisRun = thisRun, lifetime = lifetime, bestRun = maxOf(bestRunRuns, thisRun),
-            runs = finishedRuns, unidentified = cat("Unidentified"), smartHome = cat("Smart home"),
+            runs = finishedRuns, unidentified = cat("Unidentified"),
+            smartHome = cats.filter { com.rocketgod.warble.domain.model.DeviceCategory.of(it.category) == com.rocketgod.warble.domain.model.DeviceCategory.IOT }
+                .sumOf { it.c.toLong() },
             nearby = repo.nearbyCount(), perType = pt,
             wifiLifetime = wifi?.unique ?: 0,
             wifiThisRun = wifi?.newThisRun ?: 0,

@@ -71,7 +71,7 @@ import com.rocketgod.warble.ui.LeaderboardScreen
 import com.rocketgod.warble.ui.MakerDetail
 import com.rocketgod.warble.ui.MapPoint
 import com.rocketgod.warble.ui.MapScreen
-import com.rocketgod.warble.ui.Mono
+import com.rocketgod.warble.ui.AppFont
 import com.rocketgod.warble.ui.inkOn
 import com.rocketgod.warble.ui.ObservationDetail
 import com.rocketgod.warble.ui.Onboarding
@@ -83,30 +83,28 @@ import com.rocketgod.warble.ui.Palette
 import com.rocketgod.warble.usb.BeastState
 import com.rocketgod.warble.usb.UsbBeast
 import com.rocketgod.warble.ui.SignalDetail
+import com.rocketgod.warble.ui.navigation.AppNavigator
+import com.rocketgod.warble.ui.navigation.AppShell
+import com.rocketgod.warble.ui.navigation.Screen
+import com.rocketgod.warble.ui.theme.LocalIsDarkTheme
+import com.rocketgod.warble.ui.theme.ThemeMode
+import com.rocketgod.warble.ui.theme.WardriveTheme
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.statusBarsPadding
 import kotlinx.coroutines.launch
 
-sealed interface Screen {
-    data object Dash : Screen
-    data object Board : Screen
-    data class Detail(val contact: Contact) : Screen
-    data class ObsDetail(val obs: ObservationEntity) : Screen
-    data class MakerDetail(val maker: String) : Screen
-    data object Field : Screen
-    data object Help : Screen
-    data object Satellites : Screen
-    data class SatelliteDetail(val id: String) : Screen
-    data class CellTowerDetail(val id: String) : Screen
-    data class MapView(val title: String, val points: List<MapPoint>, val markers: List<com.rocketgod.warble.ui.MapMarker> = emptyList()) : Screen
-
-    data object FullMap : Screen
-    data object Pmkids : Screen
-    data class PmkidDetail(val id: String) : Screen
-    data object Privacy : Screen
-}
 
 private val usbAttachFlow = kotlinx.coroutines.flow.MutableStateFlow<android.hardware.usb.UsbDevice?>(null)
 
+/** Device profile to open, set when the user taps a following-alert notification. */
+private val openDeviceFlow = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+
 class MainActivity : ComponentActivity() {
+
+    companion object {
+        /** Intent extra: profile id of a device to open in the inspector. */
+        const val EXTRA_OPEN_DEVICE = "open_device"
+    }
 
     fun applyOrientation(allowUpsideDown: Boolean) {
         requestedOrientation = if (allowUpsideDown) ActivityInfo.SCREEN_ORIENTATION_FULL_USER
@@ -131,10 +129,11 @@ class MainActivity : ComponentActivity() {
             com.rocketgod.warble.ui.UiFlags.seed(it.getBoolean("dark_map", false), it.getBoolean("reduce_motion", false),
                 it.getBoolean("offensive_banners", true), it.getBoolean("capture_banners", true), it.getBoolean("achievement_banners", true))
             com.rocketgod.warble.ui.MapLayerFilter.seed(this)
+            com.rocketgod.warble.ui.MapLayerState.seed(this)
 
-            runCatching { com.rocketgod.warble.ui.Palette.apply(com.rocketgod.warble.model.Skin.valueOf(it.getString("skin", "TEAL") ?: "TEAL")) }
         }
         handleUsbAttach(intent)
+        intent?.getStringExtra(EXTRA_OPEN_DEVICE)?.let { openDeviceFlow.value = it }
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
@@ -150,7 +149,7 @@ class MainActivity : ComponentActivity() {
             val d = LocalDensity.current
             CompositionLocalProvider(LocalDensity provides Density(d.density, d.fontScale * uiFontScale)) {
                 if (!crash.isNullOrBlank()) {
-                    CrashScreen(crash) { deleteFile(WarbleApp.CRASH_FILE); recreate() }
+                    WardriveTheme(seed = Color(0xFF37ECCB)) { CrashScreen(crash) { deleteFile(WarbleApp.CRASH_FILE); recreate() } }
                 } else {
                     App(
                         uiFontScale = uiFontScale,
@@ -165,6 +164,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleUsbAttach(intent)
+        intent.getStringExtra(EXTRA_OPEN_DEVICE)?.let { openDeviceFlow.value = it }
     }
 
     private fun handleUsbAttach(intent: Intent?) {
@@ -212,28 +212,28 @@ private fun CrashScreen(text: String, onDismiss: () -> Unit) {
     val clip = LocalClipboardManager.current
     val ctx = LocalContext.current
     Column(Modifier.fillMaxSize().background(Palette.paper).verticalScroll(rememberScrollState()).padding(16.dp)) {
-        Text("WarBLE hit an error", color = Palette.danger, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+        Text("WarBLE hit an error", color = Palette.danger, fontFamily = AppFont, fontWeight = FontWeight.Bold, fontSize = 20.sp)
         Spacer(Modifier.height(4.dp))
-        Text("Send it to the dev, or copy it, so it can be fixed.", color = Palette.muted, fontFamily = Mono, fontSize = 12.sp)
+        Text("Send it to the dev, or copy it, so it can be fixed.", color = Palette.muted, fontFamily = AppFont, fontSize = 12.sp)
         Spacer(Modifier.height(12.dp))
         Box(
             Modifier.border(1.dp, Palette.glow, RoundedCornerShape(10.dp))
                 .clickable { emailCrashToDev(ctx, text) }.padding(horizontal = 16.dp, vertical = 10.dp)
-        ) { Text("Send to dev", color = Palette.ink, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 14.sp) }
+        ) { Text("Send to dev", color = Palette.ink, fontFamily = AppFont, fontWeight = FontWeight.Bold, fontSize = 14.sp) }
         Spacer(Modifier.height(10.dp))
         Row {
             Box(
                 Modifier.border(1.dp, Palette.glow, RoundedCornerShape(10.dp))
                     .clickable { clip.setText(AnnotatedString(text)) }.padding(horizontal = 16.dp, vertical = 10.dp)
-            ) { Text("Copy", color = Palette.ink, fontFamily = Mono, fontSize = 14.sp) }
+            ) { Text("Copy", color = Palette.ink, fontFamily = AppFont, fontSize = 14.sp) }
             Spacer(Modifier.width(10.dp))
             Box(
                 Modifier.border(1.dp, Palette.line, RoundedCornerShape(10.dp))
                     .clickable { onDismiss() }.padding(horizontal = 16.dp, vertical = 10.dp)
-            ) { Text("Dismiss & retry", color = Palette.ink, fontFamily = Mono, fontSize = 14.sp) }
+            ) { Text("Dismiss & retry", color = Palette.ink, fontFamily = AppFont, fontSize = 14.sp) }
         }
         Spacer(Modifier.height(14.dp))
-        Text(text, color = Palette.ink, fontFamily = Mono, fontSize = 11.sp)
+        Text(text, color = Palette.ink, fontFamily = AppFont, fontSize = 11.sp)
     }
 }
 
@@ -282,8 +282,16 @@ private fun App(uiFontScale: Float = 1f, onUiFontScale: (Float) -> Unit = {}) {
     val wdgwPhaseUi by vm.wdgwPhase.collectAsState()
     val uploadLineUi by vm.uploadLine.collectAsState()
     val hashesThisRunUi by vm.hashesThisRun.collectAsState()
-    val accent = Color(skin.accentHex)
-    val deep = Color(skin.deepHex)
+    val graph = remember { com.rocketgod.warble.core.AppGraph.get(context) }
+    var themeMode by remember { mutableStateOf(ThemeMode.of(graph.settings.themeMode)) }
+    var dynamicColor by remember { mutableStateOf(graph.settings.dynamicColor) }
+    var retentionDays by remember { mutableStateOf(graph.settings.historyRetentionDays) }
+    val followAlerts by graph.following.alerts.collectAsState()
+    val sightingCount by remember { graph.intel.sightingCount() }.collectAsState(initial = 0L)
+    val runId by vm.repo.runIdFlow.collectAsState()
+    val devicesVm: com.rocketgod.warble.ui.devices.DevicesViewModel = viewModel()
+    val insightsVm: com.rocketgod.warble.ui.insights.InsightsViewModel = viewModel()
+    val liveKeys = remember(live) { live.mapTo(HashSet(live.size)) { it.key } }
 
     var onboarded by remember { mutableStateOf(prefs.getBoolean("onboarded", false)) }
 
@@ -316,7 +324,8 @@ private fun App(uiFontScale: Float = 1f, onUiFontScale: (Float) -> Unit = {}) {
 
     val blockedList by vm.blockedDevices.collectAsState()
     val blockedKeys = remember(blockedList) { blockedList.mapTo(HashSet()) { it.bssid.lowercase() } }
-    var screen by remember { mutableStateOf<Screen>(Screen.Dash) }
+    val nav = remember { AppNavigator() }
+    val screen = nav.current
 
     LaunchedEffect(screen) {
         vm.heavyDataActive.value = screen is Screen.Field || screen is Screen.ObsDetail ||
@@ -327,17 +336,31 @@ private fun App(uiFontScale: Float = 1f, onUiFontScale: (Float) -> Unit = {}) {
         val flag = android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
         (context as? android.app.Activity)?.window?.let { if (keepScreenOnUi) it.addFlags(flag) else it.clearFlags(flag) }
     }
-    val backStack = remember { mutableStateListOf<Screen>() }
     val stateHolder = rememberSaveableStateHolder()
-    fun go(next: Screen) { backStack.add(screen); screen = next }
-    fun back() { screen = backStack.removeLastOrNull() ?: Screen.Dash }
-    androidx.activity.compose.BackHandler(enabled = backStack.isNotEmpty()) { back() }
-    var beast by remember { mutableStateOf<BeastState>(BeastState.Internal) }
-    var fwStatus by remember { mutableStateOf<String?>(null) }
+    fun go(next: Screen) = nav.go(next)
+    fun back() = nav.back()
+    androidx.activity.compose.BackHandler(enabled = nav.canGoBack) { back() }
+
+    val openDevice by openDeviceFlow.collectAsState()
+    LaunchedEffect(openDevice) {
+        val id = openDevice ?: return@LaunchedEffect
+        openDeviceFlow.value = null
+        go(Screen.DeviceDetail(id))
+    }
+    /** Open the new device inspector for a stored observation (cell towers keep their own screen). */
+    fun openObservation(o: ObservationEntity) {
+        val cid = if (o.type == "CELL") cellTowers.firstOrNull { "${it.mcc}_${it.mnc}_${it.cid}" == o.key }?.id else null
+        if (cid != null) go(Screen.CellTowerDetail(cid)) else go(Screen.DeviceDetail(o.profileId ?: o.key))
+    }
+    val usb = remember { com.rocketgod.warble.usb.AdapterSessionController(context, scope) { vm.repo.feedMonitor(it) } }
     var showDiag by remember { mutableStateOf(false) }
     var showWigle by remember { mutableStateOf(false) }
-    var koNotice by remember { mutableStateOf<Pair<String, String>?>(null) }
     var locateRequest by remember { mutableStateOf<String?>(null) }
+    /** Hand a MAC to the Scan screen's locator tool and switch to it. */
+    fun locate(key: String) {
+        locateRequest = key
+        nav.selectTab(com.rocketgod.warble.ui.navigation.TopLevel.SCAN)
+    }
 
     var wigleLifeWifi by remember { mutableStateOf(prefs.getLong("wigle_life_wifi", -1L)) }
     var wigleLifeBt by remember { mutableStateOf(prefs.getLong("wigle_life_bt", -1L)) }
@@ -449,296 +472,16 @@ private fun App(uiFontScale: Float = 1f, onUiFontScale: (Float) -> Unit = {}) {
             }
         }
     }
-    var lastUpload by remember { mutableStateOf(0L) }
-    var lastEngageId by remember { mutableStateOf(-1) }
-    var lastEngageAt by remember { mutableStateOf(0L) }
-    var lastEngagedDevice by remember { mutableStateOf<android.hardware.usb.UsbDevice?>(null) }
-
-    var autoResetCount by remember { mutableStateOf(0) }
-    var pendingReengage by remember { mutableStateOf<android.hardware.usb.UsbDevice?>(null) }
-    val userStopped = remember { java.util.concurrent.atomic.AtomicBoolean(false) }
-    val feeding = remember { java.util.concurrent.atomic.AtomicBoolean(false) }
-
-    fun startMonitorFeed() {
-        if (!feeding.compareAndSet(false, true)) return
-        scope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            try {
-                var idle = 0
-                while (idle < 15 && !com.rocketgod.warble.usb.MonitorCapture.isRunning()) {
-                    kotlinx.coroutines.delay(200); idle++
-                }
-                var lastLogged = -1
-                while (com.rocketgod.warble.usb.MonitorCapture.isRunning()) {
-                    val snap = com.rocketgod.warble.usb.MonitorCapture.snapshotSightings()
-                    if (snap.isNotEmpty()) {
-                        if (snap.size != lastLogged) {
-                            lastLogged = snap.size
-                            com.rocketgod.warble.usb.BeastDiag.log(
-                                "monitor feed -> app: ${snap.size} device(s) pushed to live list (${snap.count { it.isAp }} AP, ${snap.count { !it.isAp }} client)")
-                        }
-                        vm.repo.feedMonitor(snap.map { s ->
-                            com.rocketgod.warble.scan.RawObservation(
-                                key = s.mac,
-                                type = com.rocketgod.warble.model.SignalType.WIFI,
-
-                                name = s.ssid ?: s.probedSsids.firstOrNull(),
-                                rssi = (s.rssi - 95).coerceIn(-120, -20),
-                                channel = s.channel, frequency = 2407 + s.channel * 5,
-                                viaMonitor = true,
-                                wifiClient = !s.isAp,
-                                flockProbe = s.flock
-                            )
-                        })
-                    }
-                    kotlinx.coroutines.delay(2000)
-                }
-            } finally { feeding.set(false) }
-        }
-    }
-
-    fun launchAdapterSession(d: android.hardware.usb.UsbDevice, block: suspend () -> Unit) {
-        scope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            val start = android.os.SystemClock.elapsedRealtime()
-            try { block() } finally {
-                val ranMs = android.os.SystemClock.elapsedRealtime() - start
-                val dev = com.rocketgod.warble.usb.UsbBeast.findAdapter(context)
-                val recoverable = dev != null && com.rocketgod.warble.usb.UsbBeast.hasPermission(context, dev)
-                when {
-                    ranMs >= 15000L -> autoResetCount = 0
-                    userStopped.get() || !recoverable -> { }
-                    autoResetCount < 2 -> {
-                        autoResetCount++
-                        com.rocketgod.warble.usb.BeastDiag.log("adapter auto-reset $autoResetCount/2 — session ended in ${ranMs}ms; reopening")
-                        fwStatus = "Adapter hiccup — resetting ($autoResetCount/2)…"
-                        kotlinx.coroutines.delay(700L * autoResetCount)
-                        pendingReengage = dev
-                    }
-                    else -> fwStatus = "Adapter isn't recovering — unplug it and plug it back in"
-                }
-            }
-        }
-    }
-
-    fun armRxWatchdog() {
-        val myEngageAt = lastEngageAt
-        val startedAt = android.os.SystemClock.elapsedRealtime()
-        scope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            kotlinx.coroutines.delay(15000)
-            if (lastEngageAt != myEngageAt || userStopped.get() || beast !is BeastState.Engaged) return@launch
-            if (com.rocketgod.warble.usb.UsbBeast.lastFrameMs >= startedAt) return@launch
-            val d2 = com.rocketgod.warble.usb.UsbBeast.findAdapter(context) ?: return@launch
-            if (!com.rocketgod.warble.usb.UsbBeast.hasPermission(context, d2)) return@launch
-            if (autoResetCount < 2) {
-                autoResetCount++
-                com.rocketgod.warble.usb.BeastDiag.log("no-RX watchdog: engaged but 0 frames after 15s — auto-reset $autoResetCount/2 (the old 'unplug/replug to fix' case)")
-                fwStatus = "Adapter came up but isn't receiving — resetting ($autoResetCount/2)…"
-                com.rocketgod.warble.usb.MonitorCapture.abort()
-                com.rocketgod.warble.usb.Mt7612uMonitor.abort()
-                com.rocketgod.warble.usb.Rt3070Monitor.abort()
-                com.rocketgod.warble.usb.Rtl8821auMonitor.abort(); com.rocketgod.warble.usb.Rtl8814auMonitor.abort()
-                kotlinx.coroutines.delay(1400)
-                pendingReengage = d2
-            } else {
-                fwStatus = "Adapter isn't receiving — unplug it and plug it back in"
-            }
-        }
-    }
-    fun engage(d: android.hardware.usb.UsbDevice) {
-
-        val nowE = System.currentTimeMillis()
-        if (d.deviceId == lastEngageId && nowE - lastEngageAt < 4000) return
-        lastEngageId = d.deviceId; lastEngageAt = nowE; lastEngagedDevice = d
-        userStopped.set(false)
-        beast = BeastState.Engaged(UsbBeast.describe(d))
-        val cs0 = com.rocketgod.warble.usb.UsbBeast.chipset(d)
-
-        if (cs0 == com.rocketgod.warble.usb.UsbBeast.Chipset.RTL8821AU ||
-            cs0 == com.rocketgod.warble.usb.UsbBeast.Chipset.RTL8814AU ||
-            cs0 == com.rocketgod.warble.usb.UsbBeast.Chipset.MT7612U ||
-            cs0 == com.rocketgod.warble.usb.UsbBeast.Chipset.RT3070) armRxWatchdog()
-        when (cs0) {
-            com.rocketgod.warble.usb.UsbBeast.Chipset.RTL8187 -> {
-                scope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                    com.rocketgod.warble.usb.Rtl8187.probe(context, d) { st -> fwStatus = st }
-                }
-                return
-            }
-            com.rocketgod.warble.usb.UsbBeast.Chipset.RTL8821AU -> {
-
-                launchAdapterSession(d) {
-                    com.rocketgod.warble.usb.Rtl8821auMonitor.run(context, d, { st -> fwStatus = st }) { batch ->
-                        vm.repo.feedMonitor(batch)
-                    }
-                }
-                return
-            }
-            com.rocketgod.warble.usb.UsbBeast.Chipset.RTL8814AU -> {
-
-                launchAdapterSession(d) {
-                    com.rocketgod.warble.usb.Rtl8814auMonitor.run(context, d, { st -> fwStatus = st }) { batch ->
-                        vm.repo.feedMonitor(batch)
-                    }
-                }
-                return
-            }
-            com.rocketgod.warble.usb.UsbBeast.Chipset.MT7612U -> {
-
-                launchAdapterSession(d) {
-                    if (com.rocketgod.warble.usb.Mt7612uLoader.upload(context, d) { st -> fwStatus = st }) {
-                        kotlinx.coroutines.delay(300)
-                        com.rocketgod.warble.usb.Mt7612uMonitor.run(context, d, { st -> fwStatus = st }) { batch ->
-                            vm.repo.feedMonitor(batch)
-                        }
-                    }
-                }
-                return
-            }
-            com.rocketgod.warble.usb.UsbBeast.Chipset.RT3070 -> {
-
-                launchAdapterSession(d) {
-                    if (com.rocketgod.warble.usb.Rt3070Loader.upload(context, d) { st -> fwStatus = st }) {
-                        kotlinx.coroutines.delay(300)
-                        com.rocketgod.warble.usb.Rt3070Monitor.run(context, d, { st -> fwStatus = st }) { batch ->
-                            vm.repo.feedMonitor(batch)
-                        }
-                    }
-                }
-                return
-            }
-            com.rocketgod.warble.usb.UsbBeast.Chipset.KOKO -> {
-
-                scope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                    com.rocketgod.warble.usb.KokoMarauder.run(
-                        context, d, { st -> fwStatus = st }, { t, b -> koNotice = t to b }
-                    ) { batch -> vm.repo.feedMonitor(batch) }
-                }
-                return
-            }
-            com.rocketgod.warble.usb.UsbBeast.Chipset.GHOST -> {
-
-                scope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                    com.rocketgod.warble.usb.GhostEsp.run(context, d, { st -> fwStatus = st }) { batch ->
-                        vm.repo.feedMonitor(batch)
-                    }
-                }
-                return
-            }
-            com.rocketgod.warble.usb.UsbBeast.Chipset.FREEWILI -> {
-
-                scope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                    com.rocketgod.warble.usb.FreeWili.run(context, d, { st -> fwStatus = st }) { batch ->
-                        vm.repo.feedMonitor(batch)
-                    }
-                }
-                return
-            }
-            com.rocketgod.warble.usb.UsbBeast.Chipset.OTHER -> {
-                fwStatus = "Adapter ${String.format("%04x:%04x", d.vendorId, d.productId)} · detected, no driver yet"
-                return
-            }
-            else -> {}
-        }
-        val now = System.currentTimeMillis()
-        val needFw = !com.rocketgod.warble.usb.MonitorCapture.lastHandshakeOk
-        com.rocketgod.warble.usb.BeastDiag.log(
-            "engage: dev=%04x:%04x sinceUpload=%dms needFw=%b".format(d.vendorId, d.productId, now - lastUpload, needFw))
-        if (needFw || now - lastUpload > 8000L) {
-            lastUpload = now
-            launchAdapterSession(d) {
-                com.rocketgod.warble.usb.Ar9271Loader.upload(context, d) { st -> fwStatus = st }
-                kotlinx.coroutines.delay(3500)
-                val booted = com.rocketgod.warble.usb.UsbBeast.findAdapter(context) ?: d
-                com.rocketgod.warble.usb.BeastDiag.log(
-                    "post-boot handle: %04x:%04x (was %04x:%04x)".format(booted.vendorId, booted.productId, d.vendorId, d.productId))
-                beast = BeastState.Engaged(UsbBeast.describe(booted))
-                if (com.rocketgod.warble.usb.UsbBeast.hasPermission(context, booted)) {
-                    startMonitorFeed()
-                    com.rocketgod.warble.usb.MonitorCapture.probe(context, booted) { st -> fwStatus = st }
-                } else {
-                    fwStatus = "Adapter re-enumerated · re-authorize to probe"
-                    com.rocketgod.warble.usb.UsbBeast.requestPermission(context, booted)
-                }
-            }
-        } else {
-            startMonitorFeed()
-            launchAdapterSession(d) {
-                com.rocketgod.warble.usb.BeastDiag.log("skipping fw upload (recent + last handshake OK)")
-                com.rocketgod.warble.usb.MonitorCapture.probe(context, d) { st -> fwStatus = st }
-            }
-        }
-    }
-
     val hotAttach by usbAttachFlow.collectAsState()
     LaunchedEffect(hotAttach) {
         val d0 = hotAttach ?: return@LaunchedEffect
         usbAttachFlow.value = null
-        if (!UsbBeast.isSupported(d0)) return@LaunchedEffect
-
-        val d = UsbBeast.findAdapter(context) ?: d0
-        autoResetCount = 0
-
-        com.rocketgod.warble.usb.MonitorCapture.lastHandshakeOk = false
-
-        if (com.rocketgod.warble.usb.MonitorCapture.isRunning()) {
-            com.rocketgod.warble.usb.MonitorCapture.abort()
-            var w = 0
-            while (com.rocketgod.warble.usb.MonitorCapture.isRunning() && w < 3000) {
-                kotlinx.coroutines.delay(100); w += 100
-            }
-        }
-        engage(d)
+        usb.onHotAttach(d0)
     }
-
-    LaunchedEffect(pendingReengage) {
-        val d = pendingReengage ?: return@LaunchedEffect
-        pendingReengage = null
-        if (!UsbBeast.hasPermission(context, d)) return@LaunchedEffect
-        com.rocketgod.warble.usb.MonitorCapture.lastHandshakeOk = false
-        lastEngageAt = 0L
-        engage(d)
-    }
+    LaunchedEffect(usb.pendingReengage) { usb.consumeReengage() }
     DisposableEffect(Unit) {
-        val receiver = object : android.content.BroadcastReceiver() {
-            override fun onReceive(c: android.content.Context, i: android.content.Intent) {
-                when (i.action) {
-                    android.hardware.usb.UsbManager.ACTION_USB_DEVICE_DETACHED -> {
-                        val d = i.getParcelableExtra<android.hardware.usb.UsbDevice>(android.hardware.usb.UsbManager.EXTRA_DEVICE)
-                        if (d == null || UsbBeast.isSupported(d)) {
-
-                            userStopped.set(true)
-                            com.rocketgod.warble.usb.MonitorCapture.abort()
-                            com.rocketgod.warble.usb.Mt7612uMonitor.abort()
-                            com.rocketgod.warble.usb.Rt3070Monitor.abort(); com.rocketgod.warble.usb.Rtl8821auMonitor.abort(); com.rocketgod.warble.usb.Rtl8814auMonitor.abort()
-                            com.rocketgod.warble.usb.KokoMarauder.abort()
-                            com.rocketgod.warble.usb.GhostEsp.abort()
-                            com.rocketgod.warble.usb.FreeWili.abort()
-
-                            com.rocketgod.warble.usb.MonitorCapture.lastHandshakeOk = false
-                            beast = BeastState.Internal
-                            fwStatus = "Adapter unplugged · back to on-board scanning"
-                        }
-                    }
-                    UsbBeast.ACTION_PERMISSION -> {
-                        val d = i.getParcelableExtra<android.hardware.usb.UsbDevice>(android.hardware.usb.UsbManager.EXTRA_DEVICE)
-                        val ok = i.getBooleanExtra(android.hardware.usb.UsbManager.EXTRA_PERMISSION_GRANTED, false)
-                        if (d != null && ok) engage(d) else beast = BeastState.Internal
-                    }
-                }
-            }
-        }
-
-        val f = IntentFilter().apply {
-            addAction(android.hardware.usb.UsbManager.ACTION_USB_DEVICE_DETACHED)
-            addAction(UsbBeast.ACTION_PERMISSION)
-        }
-        androidx.core.content.ContextCompat.registerReceiver(context, receiver, f, androidx.core.content.ContextCompat.RECEIVER_EXPORTED)
-
-        com.rocketgod.warble.usb.BeastDiag.log(UsbBeast.scanLog(context))
-        UsbBeast.findAdapter(context)?.let { d ->
-            if (UsbBeast.hasPermission(context, d)) engage(d)
-            else { beast = BeastState.Awaiting(UsbBeast.describe(d)); UsbBeast.requestPermission(context, d) }
-        }
-        onDispose { runCatching { context.unregisterReceiver(receiver) } }
+        val unregister = usb.register()
+        onDispose { unregister() }
     }
     fun granted(): Boolean = scanPermissions().all {
         ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
@@ -780,8 +523,8 @@ private fun App(uiFontScale: Float = 1f, onUiFontScale: (Float) -> Unit = {}) {
             when (event) {
                 androidx.lifecycle.Lifecycle.Event.ON_STOP -> if (!vm.backgroundScan.value) {
                     wasScanning = vm.scanningState.value
-                    wasEngaged = beast is BeastState.Engaged
-                    userStopped.set(true)
+                    wasEngaged = usb.beast is BeastState.Engaged
+                    usb.userStopped.set(true)
                     vm.stopScanning()
                     com.rocketgod.warble.usb.MonitorCapture.abort()
                     com.rocketgod.warble.usb.Mt7612uMonitor.abort()
@@ -790,14 +533,14 @@ private fun App(uiFontScale: Float = 1f, onUiFontScale: (Float) -> Unit = {}) {
                 }
                 androidx.lifecycle.Lifecycle.Event.ON_START -> {
                     if (wasScanning && hasPerms && onboarded) vm.startScanning(true)
-                    if (wasEngaged) lastEngagedDevice?.let { d ->
-                        if (UsbBeast.hasPermission(context, d)) { lastEngageAt = 0L; engage(d) }
-                    } else if (beast is BeastState.Internal) {
+                    if (wasEngaged) usb.lastEngagedDevice?.let { d ->
+                        if (UsbBeast.hasPermission(context, d)) { usb.lastEngageAt = 0L; usb.engage(d) }
+                    } else if (usb.beast is BeastState.Internal) {
 
                         com.rocketgod.warble.usb.BeastDiag.log(UsbBeast.scanLog(context))
                         UsbBeast.findAdapter(context)?.let { d ->
-                            if (UsbBeast.hasPermission(context, d)) engage(d)
-                            else { beast = BeastState.Awaiting(UsbBeast.describe(d)); UsbBeast.requestPermission(context, d) }
+                            if (UsbBeast.hasPermission(context, d)) usb.engage(d)
+                            else { usb.beast = BeastState.Awaiting(UsbBeast.describe(d)); UsbBeast.requestPermission(context, d) }
                         }
                     }
                     wasScanning = false; wasEngaged = false
@@ -847,12 +590,11 @@ private fun App(uiFontScale: Float = 1f, onUiFontScale: (Float) -> Unit = {}) {
         }
     }
 
-    LaunchedEffect(skin) { com.rocketgod.warble.ui.Palette.apply(skin) }
     LaunchedEffect(hasPerms, onboarded) {
         if (hasPerms && onboarded) vm.startScanning(true)
     }
-    LaunchedEffect(beast) {
-        if (beast !is BeastState.Engaged) return@LaunchedEffect
+    LaunchedEffect(usb.beast) {
+        if (usb.beast !is BeastState.Engaged) return@LaunchedEffect
         while (true) {
             kotlinx.coroutines.delay(3000)
             val hits = com.rocketgod.warble.usb.PmkidCapture.drainNew()
@@ -875,6 +617,19 @@ private fun App(uiFontScale: Float = 1f, onUiFontScale: (Float) -> Unit = {}) {
         refreshWigleLife()
     }
 
+    WardriveTheme(seed = Color(skin.accentHex), mode = themeMode, dynamicColor = dynamicColor) {
+    val accent = MaterialTheme.colorScheme.primary
+    val deep = MaterialTheme.colorScheme.primaryContainer
+    val darkTheme = LocalIsDarkTheme.current
+    val hostView = androidx.compose.ui.platform.LocalView.current
+    androidx.compose.runtime.SideEffect {
+        (context as? android.app.Activity)?.window?.let { w ->
+            androidx.core.view.WindowCompat.getInsetsController(w, hostView).apply {
+                isAppearanceLightStatusBars = !darkTheme
+                isAppearanceLightNavigationBars = !darkTheme
+            }
+        }
+    }
     Box(Modifier.fillMaxSize().background(Palette.paper)) {
     if (!onboarded || !hasPerms) {
         Box(Modifier.fillMaxSize().systemBarsPadding()) {
@@ -896,7 +651,7 @@ private fun App(uiFontScale: Float = 1f, onUiFontScale: (Float) -> Unit = {}) {
                 if (!hasPerms) permLauncher.launch(scanPermissions())
                 prefs.edit().putBoolean("onboarded", true).apply()
                 onboarded = true
-                screen = Screen.Privacy
+                nav.reset(Screen.Privacy)
             },
             onFinish = { wardrive ->
                 vm.setWardrive(wardrive)
@@ -904,16 +659,24 @@ private fun App(uiFontScale: Float = 1f, onUiFontScale: (Float) -> Unit = {}) {
                 if (!hasPerms) permLauncher.launch(scanPermissions())
                 prefs.edit().putBoolean("onboarded", true).apply()
                 onboarded = true
-                screen = Screen.Dash
+                nav.reset(Screen.Dash)
             }
         )
         }
     } else {
-        Box(if (screen is Screen.MapView) Modifier.fillMaxSize() else Modifier.fillMaxSize().systemBarsPadding()) {
+        AppShell(nav, insightsBadge = followAlerts.count { it.level != com.rocketgod.warble.domain.tracking.AlertLevel.LOW }) { pad ->
+        // Screens built on Scaffold / full-bleed maps handle insets themselves.
+        val selfInsets = screen is Screen.MapView || screen is Screen.DeviceMap || screen is Screen.DeviceDetail ||
+            screen is Screen.DeviceHistory || screen is Screen.SecurityType || screen is Screen.NewFinds
+        Box(when {
+            selfInsets -> Modifier.fillMaxSize()
+            nav.isTopLevel -> Modifier.fillMaxSize().padding(pad)
+            else -> Modifier.fillMaxSize().systemBarsPadding()
+        }) {
     when (val s = screen) {
         is Screen.Dash -> stateHolder.SaveableStateProvider("dash") {
 
-            val engagedKey = (beast as? BeastState.Engaged)?.adapter?.idHex
+            val engagedKey = (usb.beast as? BeastState.Engaged)?.adapter?.idHex
             remember(engagedKey) {
                 if (engagedKey != null) {
                     com.rocketgod.warble.usb.UsbBeast.currentAdapterKey = engagedKey
@@ -936,7 +699,7 @@ private fun App(uiFontScale: Float = 1f, onUiFontScale: (Float) -> Unit = {}) {
             else
             Dashboard(
                 stats = stats, liveCount = live.size, contacts = live,
-                categoryTally = categoryTally, feed = feed, skin = skin, scanning = scanning, beast = beast, fwStatus = fwStatus,
+                categoryTally = categoryTally, feed = feed, skin = skin, scanning = scanning, beast = usb.beast, fwStatus = usb.fwStatus,
                 wigleLifeWifi = wigleLifeWifi, wigleLifeBt = wigleLifeBt, wigleLifeCell = wigleLifeCell,
                 gnss = gnss,
                 newWifi = newUnsentWifi, newBle = newUnsentBle, newCell = newUnsentCell,
@@ -997,8 +760,10 @@ private fun App(uiFontScale: Float = 1f, onUiFontScale: (Float) -> Unit = {}) {
                         else go(Screen.PmkidDetail(m.key))
                     }
                 },
-                onOpenMapPoint = { key -> scope.launch { vm.obsByKey(key)?.let { go(Screen.ObsDetail(it)) } } },
-                mapSeedCenter = { vm.recentLocatedLatLng() }
+                onOpenMapPoint = { key -> go(Screen.DeviceDetail(key)) },
+                mapSeedCenter = { vm.recentLocatedLatLng() },
+                onCategory = { go(Screen.Devices(it)) },
+                onNewFinds = { go(Screen.NewFinds(it)) }
             )
         }
         is Screen.Field -> stateHolder.SaveableStateProvider("field") {
@@ -1008,11 +773,7 @@ private fun App(uiFontScale: Float = 1f, onUiFontScale: (Float) -> Unit = {}) {
                 loadMonitorCat = { c -> vm.obsMonitorByCat(c) },
                 loadNotable = { brands -> vm.obsByMakers(brands) },
                 exportSessions = exportSessions,
-                onSelectObs = { o ->
-                    val cid = if (o.type == "CELL")
-                        cellTowers.firstOrNull { "${it.mcc}_${it.mnc}_${it.cid}" == o.key }?.id else null
-                    if (cid != null) go(Screen.CellTowerDetail(cid)) else go(Screen.ObsDetail(o))
-                },
+                onSelectObs = { o -> openObservation(o) },
                 onSelectMaker = { go(Screen.MakerDetail(it)) },
                 onMasterMap = { m ->
                     scope.launch { go(Screen.MapView("${m.label} map", vm.mapPointsByType(m.name))) }
@@ -1067,6 +828,10 @@ private fun App(uiFontScale: Float = 1f, onUiFontScale: (Float) -> Unit = {}) {
                 canBlock = s.contact.type != com.rocketgod.warble.model.SignalType.CELL,
                 blocked = blocked,
                 onBlockToggle = { if (blocked) vm.unblockDevice(s.contact.key) else vm.blockDevice(s.contact.key, s.contact.name) },
+                onProfile = {
+                    // Make sure the row exists before the inspector queries it.
+                    scope.launch { vm.repo.flushPending(); go(Screen.DeviceDetail(s.contact.profileId)) }
+                },
                 onBack = { back() })
         }
         is Screen.ObsDetail -> stateHolder.SaveableStateProvider("obs:${s.obs.key}") {
@@ -1090,7 +855,7 @@ private fun App(uiFontScale: Float = 1f, onUiFontScale: (Float) -> Unit = {}) {
             )
         }
         is Screen.MakerDetail -> stateHolder.SaveableStateProvider("maker:${s.maker}") {
-            MakerDetail(maker = s.maker, loadRows = { m -> vm.obsByMaker(m) }, accent = accent, onSelectObs = { go(Screen.ObsDetail(it)) }, onBack = { back() })
+            MakerDetail(maker = s.maker, loadRows = { m -> vm.obsByMaker(m) }, accent = accent, onSelectObs = { openObservation(it) }, onBack = { back() })
         }
         is Screen.FullMap -> stateHolder.SaveableStateProvider("fullmap") {
             com.rocketgod.warble.ui.FindsMapTool(
@@ -1106,7 +871,7 @@ private fun App(uiFontScale: Float = 1f, onUiFontScale: (Float) -> Unit = {}) {
                         else go(Screen.PmkidDetail(m.key))
                     }
                 },
-                onOpenPoint = { key -> scope.launch { vm.obsByKey(key)?.let { go(Screen.ObsDetail(it)) } } },
+                onOpenPoint = { key -> go(Screen.DeviceDetail(key)) },
                 seedCenter = { vm.recentLocatedLatLng() },
                 onBack = { back() },
                 wigleName = (prefs.getString("wigle_name", "") ?: "").trim(),
@@ -1121,7 +886,7 @@ private fun App(uiFontScale: Float = 1f, onUiFontScale: (Float) -> Unit = {}) {
 
                     scope.launch {
                         val obs = vm.obsByKey(k)
-                        if (obs != null) go(Screen.ObsDetail(obs))
+                        if (obs != null) openObservation(obs)
                         else if (pmkidsAll.any { it.pmkid == k }) go(Screen.PmkidDetail(k))
                     }
                 },
@@ -1242,106 +1007,145 @@ private fun App(uiFontScale: Float = 1f, onUiFontScale: (Float) -> Unit = {}) {
             )
             else back()
         }
-    }
+        is Screen.Devices -> stateHolder.SaveableStateProvider("devices") {
+            com.rocketgod.warble.ui.devices.DevicesScreen(
+                vm = devicesVm, liveKeys = liveKeys, initialCategory = s.category,
+                onOpen = { go(Screen.DeviceDetail(it)) },
+                onLocate = { locate(it) }
+            )
+        }
+        is Screen.Insights -> stateHolder.SaveableStateProvider("insights") {
+            com.rocketgod.warble.ui.insights.InsightsScreen(
+                vm = insightsVm, runId = runId, live = live,
+                onOpenDevice = { go(Screen.DeviceDetail(it)) },
+                onOpenSecurityType = { go(Screen.SecurityType(it)) },
+                onLocate = { locate(it) }
+            )
+        }
+        is Screen.More -> stateHolder.SaveableStateProvider("more") {
+            com.rocketgod.warble.ui.more.MoreScreen(
+                onOpen = { d ->
+                    when (d) {
+                        com.rocketgod.warble.ui.more.MoreDestination.FIELD_REPORT -> go(Screen.Field)
+                        com.rocketgod.warble.ui.more.MoreDestination.LEADERBOARDS -> go(Screen.Board)
+                        com.rocketgod.warble.ui.more.MoreDestination.SATELLITES -> go(Screen.Satellites)
+                        com.rocketgod.warble.ui.more.MoreDestination.PMKIDS -> go(Screen.Pmkids)
+                        com.rocketgod.warble.ui.more.MoreDestination.PRIVACY -> go(Screen.Privacy)
+                        com.rocketgod.warble.ui.more.MoreDestination.API_KEYS -> { wigleSendAfterSave = false; wdgwSendAfterSave = false; showWigle = true }
+                        com.rocketgod.warble.ui.more.MoreDestination.SETTINGS -> go(Screen.Help)
+                    }
+                },
+                themeMode = themeMode, onThemeMode = { themeMode = it; graph.settings.themeMode = it.key },
+                dynamicColor = dynamicColor, onDynamicColor = { dynamicColor = it; graph.settings.dynamicColor = it },
+                accent = skin, onAccent = { vm.skin.value = it; prefs.edit().putString("skin", it.name).apply() },
+                retentionDays = retentionDays,
+                onRetentionDays = {
+                    retentionDays = it; graph.settings.historyRetentionDays = it
+                    scope.launch { graph.intel.pruneHistory(it) }
+                },
+                sightingCount = sightingCount
+            )
+        }
+        is Screen.DeviceDetail -> stateHolder.SaveableStateProvider("device:${s.profileId}") {
+            val dvm = com.rocketgod.warble.ui.devices.rememberDeviceDetailViewModel(s.profileId)
+            com.rocketgod.warble.ui.devices.DeviceDetailScreen(
+                vm = dvm, blockedKeys = blockedKeys,
+                onBlockToggle = { key, label, isBlocked -> if (isBlocked) vm.unblockDevice(key) else vm.blockDevice(key, label) },
+                onShowOnMap = { pid, enc -> go(Screen.DeviceMap(pid, enc)) },
+                onHistory = { go(Screen.DeviceHistory(it)) },
+                onLegacyDetail = { key -> scope.launch { vm.obsByKey(key)?.let { go(Screen.ObsDetail(it)) } } },
+                onBack = { back() },
+                liveKeys = liveKeys,
+                onLocate = { locate(it) }
+            )
+        }
+        is Screen.DeviceHistory -> stateHolder.SaveableStateProvider("history:${s.profileId}") {
+            com.rocketgod.warble.ui.devices.EncounterHistoryScreen(
+                vm = com.rocketgod.warble.ui.devices.rememberDeviceDetailViewModel(s.profileId),
+                onOpenEncounter = { pid, idx -> go(Screen.DeviceMap(pid, idx)) },
+                onShowAll = { go(Screen.DeviceMap(it, null)) },
+                onBack = { back() }
+            )
+        }
+        is Screen.DeviceMap -> stateHolder.SaveableStateProvider("devmap:${s.profileId}:${s.encounter}") {
+            com.rocketgod.warble.ui.devices.DeviceMapScreen(
+                vm = com.rocketgod.warble.ui.devices.rememberDeviceDetailViewModel(s.profileId),
+                initialEncounter = s.encounter, currentPose = { vm.lastPose() }, onBack = { back() }
+            )
+        }
+        is Screen.NewFinds -> stateHolder.SaveableStateProvider("newfinds") {
+            com.rocketgod.warble.ui.scan.NewFindsScreen(
+                initialType = s.type,
+                counts = mapOf(
+                    com.rocketgod.warble.model.SignalType.WIFI to newUnsentWifi,
+                    com.rocketgod.warble.model.SignalType.BLE to newUnsentBle,
+                    com.rocketgod.warble.model.SignalType.CELL to newUnsentCell,
+                ),
+                load = { t -> graph.intel.newFinds(t.name) },
+                cellTowers = cellTowers,
+                onOpen = { o -> openObservation(o) },
+                onBack = { back() }
+            )
+        }
+        is Screen.SecurityType -> stateHolder.SaveableStateProvider("sec:${s.type.key}") {
+            com.rocketgod.warble.ui.insights.SecurityTypeScreen(
+                type = s.type, vm = insightsVm, onOpenDevice = { go(Screen.DeviceDetail(it)) }, onBack = { back() }
+            )
         }
     }
-        BeastOverlay(beast, accent)
+        }
+        }
+    }
+        BeastOverlay(usb.beast, accent)
         if (showDiag) com.rocketgod.warble.ui.BeastDiagDialog(
             accent,
             { com.rocketgod.warble.usb.BeastDiag.dump() },
             { showDiag = false },
             clipProvider = { com.rocketgod.warble.usb.BeastDiag.dumpForClipboard() })
-        koNotice?.let { (koTitle, koBody) ->
+        usb.koNotice?.let { (koTitle, koBody) ->
             AlertDialog(
-                onDismissRequest = { koNotice = null },
+                onDismissRequest = { usb.koNotice = null },
                 containerColor = Palette.surface,
                 title = { Text("⚡ Marauder · $koTitle", color = Palette.ink,
-                    fontFamily = Mono, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, fontSize = 15.sp) },
-                text = { Text(koBody, color = Palette.muted, fontFamily = Mono, fontSize = 13.sp) },
+                    fontFamily = AppFont, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, fontSize = 15.sp) },
+                text = { Text(koBody, color = Palette.muted, fontFamily = AppFont, fontSize = 13.sp) },
                 confirmButton = {
-                    TextButton(onClick = { koNotice = null }) {
-                        Text("Got it", color = accent, fontFamily = Mono,
+                    TextButton(onClick = { usb.koNotice = null }) {
+                        Text("Got it", color = accent, fontFamily = AppFont,
                             fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                     }
                 })
         }
         if (showWigle) {
-            var wName by remember { mutableStateOf(prefs.getString("wigle_name", "") ?: "") }
-            var wToken by remember { mutableStateOf(prefs.getString("wigle_token", "") ?: "") }
-            var wdKey by remember { mutableStateOf(prefs.getString("wdgw_key", "") ?: "") }
-            val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
-            val fieldColors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                focusedTextColor = Palette.ink, unfocusedTextColor = Palette.ink,
-                focusedBorderColor = accent, unfocusedBorderColor = Palette.line,
-                cursorColor = accent, focusedLabelColor = accent, unfocusedLabelColor = Palette.muted,
-                focusedContainerColor = Palette.surface, unfocusedContainerColor = Palette.surface
-            )
-            val sendLabel = when {
-                wigleSendAfterSave -> "Save & Send"
-                wdgwSendAfterSave -> "Save & Send"
-                else -> "Save"
-            }
-            AlertDialog(
-                onDismissRequest = { showWigle = false },
-                title = { Text("API keys", color = Palette.ink, fontFamily = Mono) },
-                text = {
-                    Column(Modifier.verticalScroll(rememberScrollState())) {
-                        Text("WiGLE — API Name + Token (wigle.net → Account → API). Stored on this device only.",
-                            color = Palette.muted, fontFamily = Mono, fontSize = 14.sp)
-                        Spacer(Modifier.height(10.dp))
-                        OutlinedTextField(value = wName, onValueChange = { wName = it },
-                            singleLine = true, label = { Text("WiGLE API Name") },
-                            textStyle = androidx.compose.ui.text.TextStyle(color = Palette.ink, fontFamily = Mono),
-                            colors = fieldColors)
-                        Spacer(Modifier.height(8.dp))
-                        OutlinedTextField(value = wToken, onValueChange = { wToken = it },
-                            singleLine = true, label = { Text("WiGLE API Token") },
-                            textStyle = androidx.compose.ui.text.TextStyle(color = Palette.ink, fontFamily = Mono),
-                            colors = fieldColors)
-                        Spacer(Modifier.height(6.dp))
-                        Text("Get your WiGLE key ↗", color = accent, fontFamily = Mono, fontSize = 13.sp,
-                            modifier = Modifier.clickable { uriHandler.openUri("https://wigle.net/account") })
-                        Spacer(Modifier.height(16.dp))
-                        Text("WDGWars — 64-char API key (wdgwars.pl → profile → API keys).",
-                            color = Palette.muted, fontFamily = Mono, fontSize = 14.sp)
-                        Spacer(Modifier.height(10.dp))
-                        OutlinedTextField(value = wdKey, onValueChange = { wdKey = it },
-                            singleLine = true, label = { Text("WDGWars API Key") },
-                            textStyle = androidx.compose.ui.text.TextStyle(color = Palette.ink, fontFamily = Mono),
-                            colors = fieldColors)
-                        Spacer(Modifier.height(6.dp))
-                        Text("Get your WDGWars key ↗", color = accent, fontFamily = Mono, fontSize = 13.sp,
-                            modifier = Modifier.clickable { uriHandler.openUri("https://wdgwars.pl/profile/") })
+            com.rocketgod.warble.ui.ApiKeysDialog(
+                initial = com.rocketgod.warble.ui.ApiKeys(
+                    wigleName = prefs.getString("wigle_name", "") ?: "",
+                    wigleToken = prefs.getString("wigle_token", "") ?: "",
+                    wdgwKey = prefs.getString("wdgw_key", "") ?: "",
+                    cartoKey = com.rocketgod.warble.ui.CartoTiles.apiKey,
+                ),
+                confirmLabel = if (wigleSendAfterSave || wdgwSendAfterSave) "Save & send" else "Save",
+                onSave = { k ->
+                    prefs.edit()
+                        .putString("wigle_name", k.wigleName)
+                        .putString("wigle_token", k.wigleToken)
+                        .putString("wdgw_key", k.wdgwKey)
+                        .apply()
+                    com.rocketgod.warble.ui.CartoTiles.save(context, k.cartoKey)
+                    val sendW = wigleSendAfterSave
+                    val sendD = wdgwSendAfterSave
+                    wigleSendAfterSave = false
+                    wdgwSendAfterSave = false
+                    showWigle = false
+                    when {
+                        sendW -> sendToWigleNow()
+                        sendD -> sendToWdgwNow()
+                        else -> android.widget.Toast.makeText(context, "API keys saved", android.widget.Toast.LENGTH_SHORT).show()
                     }
                 },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            prefs.edit()
-                                .putString("wigle_name", wName.trim())
-                                .putString("wigle_token", wToken.trim())
-                                .putString("wdgw_key", wdKey.trim())
-                                .apply()
-                            val sendW = wigleSendAfterSave
-                            val sendD = wdgwSendAfterSave
-                            wigleSendAfterSave = false
-                            wdgwSendAfterSave = false
-                            showWigle = false
-                            when {
-                                sendW -> sendToWigleNow()
-                                sendD -> sendToWdgwNow()
-                                else -> android.widget.Toast.makeText(context, "API keys saved", android.widget.Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    ) { Text(sendLabel, color = accent, fontFamily = Mono) }
-                },
-                dismissButton = {
-                    TextButton(onClick = { wigleSendAfterSave = false; wdgwSendAfterSave = false; showWigle = false }) {
-                        Text("Cancel", color = Palette.muted, fontFamily = Mono)
-                    }
-                },
-                containerColor = Palette.surface
+                onDismiss = { wigleSendAfterSave = false; wdgwSendAfterSave = false; showWigle = false }
             )
         }
+    }
     }
 }
